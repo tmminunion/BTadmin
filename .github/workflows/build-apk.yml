@@ -72,13 +72,14 @@ jobs:
           g = g.replace("minSdkVersion flutter.minSdkVersion", "minSdkVersion 24")
 
           if gpath.endswith(".kts"):
+              g = "import java.util.Properties\nimport java.io.FileInputStream\n" + g
               signing_block = """
           signingConfigs {
               create("release") {
                   val propsFile = rootProject.file("key.properties")
                   if (propsFile.exists()) {
-                      val props = java.util.Properties()
-                      props.load(java.io.FileInputStream(propsFile))
+                      val props = Properties()
+                      props.load(FileInputStream(propsFile))
                       storeFile = file(props.getProperty("storeFile"))
                       storePassword = props.getProperty("storePassword")
                       keyAlias = props.getProperty("keyAlias")
