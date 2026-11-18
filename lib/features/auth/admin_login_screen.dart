@@ -96,155 +96,208 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0E1830), AdminColors.bg],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
                       child: Container(
-                        width: 82,
-                        height: 82,
+                        width: 78,
+                        height: 78,
                         decoration: BoxDecoration(
-                          color: AdminColors.card,
+                          gradient: AdminColors.heroGradient,
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: AdminColors.gold, width: 1.5),
+                          border: Border.all(
+                            color: AdminColors.gold.withValues(alpha: 0.65),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AdminColors.gold.withValues(alpha: 0.14),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(14),
                         child: Image.asset('assets/img/appicon.png'),
                       ),
                     ),
                     const SizedBox(height: 18),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AdminColors.gold.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AdminColors.gold.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: const Text(
+                          'EXECUTIVE COMMAND CENTER',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 1.4,
+                            fontWeight: FontWeight.w800,
+                            color: AdminColors.gold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     const Text(
-                      'BTadmin Command Center',
+                      'BTadmin Portal',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
                         color: AdminColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     const Text(
-                      'Akses khusus Superadmin & Pengurus Admin Panel Bungtemin',
+                      'PUK SP LEM SPSI PT. TMMIN • Admin Panel Mobile',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         color: AdminColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 26),
-                    if (_statusMsg != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: (_isError
-                                  ? AdminColors.danger
-                                  : AdminColors.emerald)
-                              .withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _isError
-                                ? AdminColors.danger
-                                : AdminColors.emerald,
-                          ),
-                        ),
-                        child: Text(
-                          _statusMsg!,
-                          style: TextStyle(
-                            color: _isError
-                                ? const Color(0xFFFCA5A5)
-                                : const Color(0xFF6EE7B7),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    TextFormField(
-                      controller: _noregCtrl,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Noreg Admin',
-                        hintText: 'Contoh: 00415024',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Noreg wajib diisi' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _secretCtrl,
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'PIN / Password / OTP WA',
-                        hintText: 'Masukkan PIN atau kode OTP 6 digit',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'PIN / Password / OTP wajib diisi'
-                          : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: (_sendingOtp || _loading) ? null : _requestOtp,
-                        icon: _sendingOtp
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.chat_outlined, size: 17),
-                        label: const Text('Kirim OTP via WhatsApp'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: _loading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AdminColors.gold,
-                          foregroundColor: AdminColors.bg,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: _loading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  color: AdminColors.bg,
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_statusMsg != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: (_isError
+                                            ? AdminColors.danger
+                                            : AdminColors.emerald)
+                                        .withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _isError
+                                          ? AdminColors.danger
+                                          : AdminColors.emerald,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _statusMsg!,
+                                    style: TextStyle(
+                                      color: _isError
+                                          ? const Color(0xFFFCA5A5)
+                                          : const Color(0xFF6EE7B7),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
-                              )
-                            : const Icon(Icons.verified_user_rounded),
-                        label: Text(
-                          _loading ? 'Memverifikasi Admin...' : 'Masuk Admin Panel',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
+                                const SizedBox(height: 16),
+                              ],
+                              TextFormField(
+                                controller: _noregCtrl,
+                                keyboardType: TextInputType.number,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'Noreg Admin',
+                                  hintText: 'Contoh: 00415024',
+                                  prefixIcon: Icon(Icons.badge_outlined),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty)
+                                    ? 'Noreg wajib diisi'
+                                    : null,
+                              ),
+                              const SizedBox(height: 14),
+                              TextFormField(
+                                controller: _secretCtrl,
+                                obscureText: _obscure,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submit(),
+                                decoration: InputDecoration(
+                                  labelText: 'PIN / Password / OTP WA',
+                                  hintText: 'Masukkan PIN atau kode OTP 6 digit',
+                                  prefixIcon:
+                                      const Icon(Icons.lock_outline_rounded),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                  ),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty)
+                                    ? 'PIN / Password / OTP wajib diisi'
+                                    : null,
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: (_sendingOtp || _loading)
+                                      ? null
+                                      : _requestOtp,
+                                  icon: _sendingOtp
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.chat_outlined,
+                                          size: 16),
+                                  label: const Text('Kirim OTP WhatsApp'),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: _loading ? null : _submit,
+                                  icon: _loading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            color: AdminColors.bg,
+                                          ),
+                                        )
+                                      : const Icon(Icons.verified_user_rounded),
+                                  label: Text(
+                                    _loading
+                                        ? 'Memverifikasi Akses...'
+                                        : 'Masuk Command Center',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

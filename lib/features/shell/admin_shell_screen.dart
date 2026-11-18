@@ -41,6 +41,23 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   String? _error;
   String _selectedCategory = 'Semua';
 
+  static const _nativeKeys = {
+    'home',
+    'control',
+    'apps',
+    'appmenus',
+    'users',
+    'logs',
+    'berita',
+    'cerita',
+    'promo',
+    'kalender',
+    'wanotif',
+    'wanotif_antrean',
+    'email',
+    'survey',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -97,28 +114,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: isError ? AdminColors.danger : AdminColors.emerald,
       ),
     );
   }
-
-  static const _nativeKeys = {
-    'home',
-    'control',
-    'apps',
-    'appmenus',
-    'users',
-    'logs',
-    'berita',
-    'cerita',
-    'promo',
-    'kalender',
-    'wanotif',
-    'wanotif_antrean',
-    'email',
-    'survey',
-  };
 
   void _openWebModule(AdminModuleItem mod) {
     final all = _dash?.modules ?? AdminModuleItem.defaults;
@@ -237,14 +237,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: AdminColors.surface,
-          title: Text('Ubah Mode Global -> ${mode.toUpperCase()}'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: AdminColors.border),
+          ),
+          title: Text('Mode Global → ${mode.toUpperCase()}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: reasonCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Alasan / Pesan ke User',
+                  labelText: 'Alasan / Pesan ke Anggota',
                   hintText: 'Opsional',
                 ),
               ),
@@ -309,27 +313,88 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     );
   }
 
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return 'A';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final dash = _dash;
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        toolbarHeight: 64,
+        title: Row(
           children: [
-            const Text(
-              'BTadmin',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-                color: AdminColors.gold,
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                gradient: AdminColors.heroGradient,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  color: AdminColors.gold.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  _initials(widget.session.nama),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13.5,
+                    color: AdminColors.gold,
+                  ),
+                ),
               ),
             ),
-            Text(
-              '${widget.session.nama} • ${widget.session.noreg}',
-              style: const TextStyle(
-                fontSize: 11.5,
-                color: AdminColors.textSecondary,
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'BTadmin',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16.5,
+                          letterSpacing: -0.2,
+                          color: AdminColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AdminColors.emerald.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'PRO',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: AdminColors.emerald,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '${widget.session.nama} • ${widget.session.noreg}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AdminColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -337,7 +402,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         actions: [
           if (_busyAction)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: 10),
               child: Center(
                 child: SizedBox(
                   width: 18,
@@ -348,15 +413,19 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             ),
           IconButton(
             tooltip: 'Segarkan Data',
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 22),
             onPressed: _loadDashboard,
           ),
           IconButton(
             tooltip: 'Keluar',
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, size: 21),
             onPressed: widget.onLogout,
           ),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+        ),
       ),
       body: _loading && dash == null
           ? const Center(child: CircularProgressIndicator())
@@ -372,33 +441,42 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: AdminColors.surface,
-        indicatorColor: AdminColors.gold.withValues(alpha: 0.2),
-        selectedIndex: _tabIndex,
-        onDestinationSelected: (i) => setState(() => _tabIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded, color: AdminColors.gold),
-            label: 'Beranda',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune_rounded, color: AdminColors.gold),
-            label: 'Layanan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat_rounded, color: AdminColors.gold),
-            label: 'WA & Notif',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.apps_outlined),
-            selectedIcon: Icon(Icons.apps_rounded, color: AdminColors.gold),
-            label: '23 Modul',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AdminColors.border)),
+        ),
+        child: NavigationBar(
+          height: 66,
+          backgroundColor: AdminColors.surface,
+          indicatorColor: AdminColors.gold.withValues(alpha: 0.18),
+          selectedIndex: _tabIndex,
+          onDestinationSelected: (i) => setState(() => _tabIndex = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.space_dashboard_outlined),
+              selectedIcon:
+                  Icon(Icons.space_dashboard_rounded, color: AdminColors.gold),
+              label: 'Beranda',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.tune_outlined),
+              selectedIcon: Icon(Icons.tune_rounded, color: AdminColors.gold),
+              label: 'Layanan',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              selectedIcon:
+                  Icon(Icons.chat_bubble_rounded, color: AdminColors.gold),
+              label: 'WA & Notif',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon:
+                  Icon(Icons.grid_view_rounded, color: AdminColors.gold),
+              label: '23 Modul',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -415,17 +493,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
         if (_error != null)
           Container(
             margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AdminColors.danger.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AdminColors.danger.withValues(alpha: 0.4)),
             ),
-            child: Text(_error!, style: const TextStyle(fontSize: 12)),
+            child: Text(_error!, style: const TextStyle(fontSize: 12.5)),
           ),
         _StatusHeroCard(dash: dash),
         const SizedBox(height: 14),
@@ -459,85 +538,124 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        const Text(
-          'Akses Cepat Admin Panel',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        const SizedBox(height: 22),
+        const _SectionHeader(
+          title: 'Akses Cepat Operasional',
+          subtitle: 'Buka fitur manajemen inti secara native',
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 4,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 0.92,
           children: [
-            _QuickChip(
-              icon: Icons.space_dashboard_rounded,
-              label: 'Dashboard Web',
-              onTap: () => _openModuleByKey('home'),
-            ),
-            _QuickChip(
+            _QuickActionTile(
               icon: Icons.people_alt_rounded,
               label: 'Pengguna',
+              color: AdminColors.sky,
               onTap: () => _openModuleByKey('users'),
             ),
-            _QuickChip(
+            _QuickActionTile(
               icon: Icons.newspaper_rounded,
-              label: 'Berita & FCM',
+              label: 'Berita',
+              color: AdminColors.emerald,
               onTap: () => _openModuleByKey('berita'),
             ),
-            _QuickChip(
+            _QuickActionTile(
               icon: Icons.auto_stories_rounded,
-              label: 'Moderasi Cerita',
+              label: 'Cerita',
+              color: AdminColors.gold,
               onTap: () => _openModuleByKey('cerita'),
             ),
-            _QuickChip(
+            _QuickActionTile(
               icon: Icons.campaign_rounded,
-              label: 'Promo & APK',
+              label: 'Promo',
+              color: AdminColors.indigo,
               onTap: () => _openModuleByKey('promo'),
             ),
-            _QuickChip(
+            _QuickActionTile(
               icon: Icons.calendar_month_rounded,
-              label: 'Kalender Kerja',
+              label: 'Kalender',
+              color: AdminColors.sky,
               onTap: () => _openModuleByKey('kalender'),
             ),
-            _QuickChip(
+            _QuickActionTile(
+              icon: Icons.playlist_add_check_circle_rounded,
+              label: 'Antrean',
+              color: AdminColors.emerald,
+              onTap: () => _openModuleByKey('wanotif_antrean'),
+            ),
+            _QuickActionTile(
+              icon: Icons.mark_email_read_rounded,
+              label: 'Email',
+              color: AdminColors.gold,
+              onTap: () => _openModuleByKey('email'),
+            ),
+            _QuickActionTile(
               icon: Icons.terminal_rounded,
-              label: 'Server SSH',
+              label: 'SSH Web',
+              color: AdminColors.textSecondary,
               onTap: () => _openModuleByKey('ssh'),
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 22),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Riwayat Login Terakhir',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            const _SectionHeader(
+              title: 'Aktivitas Login Terkini',
+              subtitle: 'Autentikasi aplikasi & portal web',
             ),
             TextButton(
               onPressed: () => _openModuleByKey('logs'),
-              child: const Text('Lihat Semua'),
+              child: const Text('Semua Log'),
             ),
           ],
         ),
+        const SizedBox(height: 6),
         ...dash.latestLogins.map(
-          (log) => Card(
+          (log) => Container(
             margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: AdminColors.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AdminColors.border),
+            ),
             child: ListTile(
               dense: true,
-              leading: Icon(
-                log.success ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                color: log.success ? AdminColors.emerald : AdminColors.danger,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              leading: CircleAvatar(
+                radius: 19,
+                backgroundColor:
+                    (log.success ? AdminColors.emerald : AdminColors.danger)
+                        .withValues(alpha: 0.16),
+                child: Icon(
+                  log.success
+                      ? Icons.check_circle_rounded
+                      : Icons.cancel_rounded,
+                  size: 19,
+                  color: log.success ? AdminColors.emerald : AdminColors.danger,
+                ),
               ),
               title: Text(
                 '${log.nama} (${log.noreg})',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              ),
-              subtitle: Text(
-                '${log.via} • ${log.device}\n${log.createdAt}',
                 style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AdminColors.textSecondary,
+                    fontWeight: FontWeight.w700, fontSize: 13.5),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Text(
+                  '${log.via} • ${log.device}\n${log.createdAt}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AdminColors.textSecondary,
+                    height: 1.35,
+                  ),
                 ),
               ),
               isThreeLine: true,
@@ -551,16 +669,26 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   Widget _buildControlTab(AdminDashboardData? dash) {
     if (dash == null) return const SizedBox.shrink();
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AdminColors.sky.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.cloud_done_rounded,
+                          color: AdminColors.sky, size: 22),
+                    ),
+                    const SizedBox(width: 12),
                     const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,7 +702,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'Aktifkan / nonaktifkan tombol SSO di Web & Flutter',
+                            'Kontrol tombol SSO pada Web & Flutter',
                             style: TextStyle(
                               fontSize: 12,
                               color: AdminColors.textSecondary,
@@ -598,75 +726,90 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                     ),
                   ],
                 ),
-                const Divider(height: 22),
+                const Divider(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Protokoler Global Layanan',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
                     ),
                     _ModeBadge(mode: dash.globalMode),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed:
-                            _busyAction ? null : () => _changeGlobalMode('online'),
-                        child: const Text('ONLINE'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AdminColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AdminColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      _GlobalSegmentBtn(
+                        label: 'ONLINE',
+                        active: dash.globalMode == 'online',
+                        color: AdminColors.emerald,
+                        onTap: _busyAction
+                            ? null
+                            : () => _changeGlobalMode('online'),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _busyAction
+                      _GlobalSegmentBtn(
+                        label: 'MAINT',
+                        active: dash.globalMode == 'maintenance',
+                        color: AdminColors.gold,
+                        onTap: _busyAction
                             ? null
                             : () => _changeGlobalMode('maintenance'),
-                        child: const Text('MAINT'),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AdminColors.danger,
-                        ),
-                        onPressed: _busyAction
+                      _GlobalSegmentBtn(
+                        label: 'OFF',
+                        active: dash.globalMode == 'shutdown',
+                        color: AdminColors.danger,
+                        onTap: _busyAction
                             ? null
                             : () => _changeGlobalMode('shutdown'),
-                        child: const Text('OFF'),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Kontrol Layanan Web & API',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            const _SectionHeader(
+              title: 'Layanan Web & API',
+              subtitle: 'Ubah status per modul layanan',
             ),
             TextButton(
-              onPressed: () => _openModuleByKey('control'),
-              child: const Text('Buka WebView'),
+              onPressed: () => _openWebModule(
+                dash.modules.firstWhere(
+                  (m) => m.key == 'control',
+                  orElse: () => dash.modules.first,
+                ),
+              ),
+              child: const Text('Versi Web'),
             ),
           ],
         ),
+        const SizedBox(height: 6),
         ...dash.services.map(
           (svc) => Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              leading: _ModeDot(mode: svc.mode),
               title: Text(
                 svc.name,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
               subtitle: Text(
                 svc.group,
@@ -675,50 +818,74 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                   color: AdminColors.textSecondary,
                 ),
               ),
-              trailing: DropdownButton<String>(
-                value: ['online', 'maintenance', 'shutdown'].contains(svc.mode)
-                    ? svc.mode
-                    : 'online',
-                underline: const SizedBox.shrink(),
-                dropdownColor: AdminColors.card,
-                items: const [
-                  DropdownMenuItem(value: 'online', child: Text('ONLINE')),
-                  DropdownMenuItem(value: 'maintenance', child: Text('MAINT')),
-                  DropdownMenuItem(value: 'shutdown', child: Text('OFF')),
-                ],
-                onChanged: _busyAction
-                    ? null
-                    : (val) {
-                        if (val != null && val != svc.mode) {
-                          _changeServiceMode(svc, val);
-                        }
-                      },
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: AdminColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AdminColors.border),
+                ),
+                child: DropdownButton<String>(
+                  value: ['online', 'maintenance', 'shutdown'].contains(svc.mode)
+                      ? svc.mode
+                      : 'online',
+                  underline: const SizedBox.shrink(),
+                  dropdownColor: AdminColors.cardElevated,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AdminColors.textPrimary,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'online', child: Text('ONLINE')),
+                    DropdownMenuItem(
+                        value: 'maintenance', child: Text('MAINT')),
+                    DropdownMenuItem(value: 'shutdown', child: Text('OFF')),
+                  ],
+                  onChanged: _busyAction
+                      ? null
+                      : (val) {
+                          if (val != null && val != svc.mode) {
+                            _changeServiceMode(svc, val);
+                          }
+                        },
+                ),
               ),
             ),
           ),
         ),
         if (dash.appMenus.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Menu Aplikasi Flutter',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              const _SectionHeader(
+                title: 'Menu Aplikasi Flutter',
+                subtitle: 'Visibilitas menu di aplikasi member',
               ),
               TextButton(
-                onPressed: () => _openModuleByKey('appmenus'),
+                onPressed: () => _openWebModule(
+                  dash.modules.firstWhere(
+                    (m) => m.key == 'appmenus',
+                    orElse: () => dash.modules.first,
+                  ),
+                ),
                 child: const Text('Atur Lengkap'),
               ),
             ],
           ),
+          const SizedBox(height: 6),
           ...dash.appMenus.map(
             (m) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: _ModeDot(mode: m.mode),
                 title: Text(
                   m.label,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14),
                 ),
                 subtitle: Text(
                   '${m.route} • ${m.group}',
@@ -727,24 +894,38 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                     color: AdminColors.textSecondary,
                   ),
                 ),
-                trailing: DropdownButton<String>(
-                  value: ['online', 'maintenance', 'off'].contains(m.mode)
-                      ? m.mode
-                      : 'online',
-                  underline: const SizedBox.shrink(),
-                  dropdownColor: AdminColors.card,
-                  items: const [
-                    DropdownMenuItem(value: 'online', child: Text('ONLINE')),
-                    DropdownMenuItem(value: 'maintenance', child: Text('MAINT')),
-                    DropdownMenuItem(value: 'off', child: Text('OFF')),
-                  ],
-                  onChanged: _busyAction
-                      ? null
-                      : (val) {
-                          if (val != null && val != m.mode) {
-                            _changeAppMenuMode(m, val);
-                          }
-                        },
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AdminColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AdminColors.border),
+                  ),
+                  child: DropdownButton<String>(
+                    value: ['online', 'maintenance', 'off'].contains(m.mode)
+                        ? m.mode
+                        : 'online',
+                    underline: const SizedBox.shrink(),
+                    dropdownColor: AdminColors.cardElevated,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AdminColors.textPrimary,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'online', child: Text('ONLINE')),
+                      DropdownMenuItem(
+                          value: 'maintenance', child: Text('MAINT')),
+                      DropdownMenuItem(value: 'off', child: Text('OFF')),
+                    ],
+                    onChanged: _busyAction
+                        ? null
+                        : (val) {
+                            if (val != null && val != m.mode) {
+                              _changeAppMenuMode(m, val);
+                            }
+                          },
+                  ),
                 ),
               ),
             ),
@@ -757,7 +938,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   Widget _buildWaTab(AdminDashboardData? dash) {
     if (dash == null) return const SizedBox.shrink();
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
         Row(
           children: [
@@ -796,11 +977,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               SwitchListTile(
                 title: const Text(
                   'Pause Semua Pengiriman WA',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
                 ),
                 subtitle: const Text(
-                  'Hentikan sementara seluruh worker Baileys',
-                  style: TextStyle(fontSize: 12),
+                  'Hentikan sementara seluruh worker Baileys 1 & 2',
+                  style: TextStyle(fontSize: 12, color: AdminColors.textSecondary),
                 ),
                 value: dash.waPauseAll,
                 activeTrackColor: AdminColors.danger,
@@ -818,11 +999,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               SwitchListTile(
                 title: const Text(
                   'Pause Antrean Kirim KTA',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
                 ),
                 subtitle: const Text(
                   'Tahan pengiriman kartu KTA massal, OTP tetap jalan',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 12, color: AdminColors.textSecondary),
                 ),
                 value: dash.waPauseKta,
                 activeTrackColor: AdminColors.gold,
@@ -845,22 +1026,19 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AdminColors.emerald,
             foregroundColor: AdminColors.bg,
-            minimumSize: const Size.fromHeight(48),
+            minimumSize: const Size.fromHeight(50),
           ),
           icon: const Icon(Icons.campaign_rounded),
-          label: const Text(
-            'Buka Broadcast Center (WA & Push FCM)',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
+          label: const Text('Buka Broadcast Center (WA & FCM)'),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: () => _openModuleByKey('wanotif_antrean'),
           style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
+            minimumSize: const Size.fromHeight(50),
           ),
           icon: const Icon(Icons.playlist_add_check_circle_rounded),
-          label: const Text('Kelola Antrean, Balance Bailey 1/2 & Dedup'),
+          label: const Text('Kelola Antrean, Retry & Bersihkan'),
         ),
       ],
     );
@@ -882,7 +1060,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
           child: TextField(
             controller: _searchCtrl,
             onChanged: (_) => setState(() {}),
@@ -902,7 +1080,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           ),
         ),
         SizedBox(
-          height: 42,
+          height: 40,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
@@ -914,33 +1092,37 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               return ChoiceChip(
                 label: Text(cat),
                 selected: selected,
-                selectedColor: AdminColors.gold.withValues(alpha: 0.25),
                 onSelected: (_) => setState(() => _selectedCategory = cat),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.15,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.08,
             ),
             itemCount: filtered.length,
             itemBuilder: (_, idx) {
               final mod = filtered[idx];
               final isNative = _nativeKeys.contains(mod.key);
-              return InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => _openModule(mod),
-                child: Card(
-                  margin: EdgeInsets.zero,
+              final accent = isNative ? AdminColors.emerald : AdminColors.sky;
+              return Material(
+                color: AdminColors.card,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AdminColors.border),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _openModule(mod),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -948,42 +1130,36 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(9),
                               decoration: BoxDecoration(
-                                color: (isNative
-                                        ? AdminColors.emerald
-                                        : AdminColors.gold)
-                                    .withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(10),
+                                color: accent.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: accent.withValues(alpha: 0.3),
+                                ),
                               ),
                               child: Icon(
                                 mod.iconData,
-                                color: isNative
-                                    ? AdminColors.emerald
-                                    : AdminColors.gold,
+                                color: accent,
                                 size: 22,
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: (isNative
-                                        ? AdminColors.emerald
-                                        : AdminColors.sky)
-                                    .withValues(alpha: 0.15),
+                                color: accent.withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 isNative ? 'NATIVE' : 'WEB',
                                 style: TextStyle(
                                   fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isNative
-                                      ? AdminColors.emerald
-                                      : AdminColors.sky,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                  color: accent,
                                 ),
                               ),
                             ),
@@ -997,15 +1173,17 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 13.5,
+                            color: AdminColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           mod.desc,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11,
+                            height: 1.3,
                             color: AdminColors.textSecondary,
                           ),
                         ),
@@ -1022,56 +1200,101 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.subtitle});
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            fontSize: 11.5,
+            color: AdminColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StatusHeroCard extends StatelessWidget {
   const _StatusHeroCard({required this.dash});
   final AdminDashboardData dash;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AdminColors.gold.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.admin_panel_settings_rounded,
-                color: AdminColors.gold,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    dash.adminJob.isNotEmpty ? dash.adminJob : 'Administrator',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'PHP ${dash.phpVersion} • SSO ${dash.ssoEnabled ? "ON" : "OFF"}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AdminColors.textSecondary,
-                    ),
-                  ),
-                ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AdminColors.heroGradient,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AdminColors.gold.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AdminColors.gold.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AdminColors.gold.withValues(alpha: 0.4),
               ),
             ),
-            _ModeBadge(mode: dash.globalMode),
-          ],
-        ),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: AdminColors.gold,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dash.adminJob.isNotEmpty ? dash.adminJob : 'Administrator',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15.5,
+                    color: AdminColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'PHP ${dash.phpVersion} • SSO ${dash.ssoEnabled ? "AKTIF" : "NONAKTIF"}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AdminColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _ModeBadge(mode: dash.globalMode),
+        ],
       ),
     );
   }
@@ -1092,54 +1315,167 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+    return Container(
+      decoration: BoxDecoration(
+        color: AdminColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AdminColors.border),
+      ),
+      padding: const EdgeInsets.all(13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
             ),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AdminColors.textSecondary,
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AdminColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AdminColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: AdminColors.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AdminColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
-    required this.icon,
+class _GlobalSegmentBtn extends StatelessWidget {
+  const _GlobalSegmentBtn({
     required this.label,
+    required this.active,
+    required this.color,
     required this.onTap,
   });
 
-  final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final bool active;
+  final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: Icon(icon, size: 16, color: AdminColors.gold),
-      label: Text(label, style: const TextStyle(fontSize: 12.5)),
-      backgroundColor: AdminColors.card,
-      side: const BorderSide(color: AdminColors.border),
-      onPressed: onTap,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? color.withValues(alpha: 0.2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: active ? Border.all(color: color.withValues(alpha: 0.7)) : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: active ? color : AdminColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeDot extends StatelessWidget {
+  const _ModeDot({required this.mode});
+  final String mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = mode.toLowerCase();
+    final Color c = m == 'online'
+        ? AdminColors.emerald
+        : (m == 'maintenance' ? AdminColors.gold : AdminColors.danger);
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: c,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 6),
+        ],
+      ),
     );
   }
 }
@@ -1160,19 +1496,31 @@ class _ModeBadge extends StatelessWidget {
       c = AdminColors.danger;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: c.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c),
+        border: Border.all(color: c.withValues(alpha: 0.7)),
       ),
-      child: Text(
-        mode.toUpperCase(),
-        style: TextStyle(
-          color: c,
-          fontWeight: FontWeight.w800,
-          fontSize: 11,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            mode.toUpperCase(),
+            style: TextStyle(
+              color: c,
+              fontWeight: FontWeight.w900,
+              fontSize: 10.5,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
