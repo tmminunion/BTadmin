@@ -307,4 +307,31 @@ class BtAdminApi {
       expiresIn: int.tryParse((data['expires_in'] ?? '60').toString()) ?? 60,
     );
   }
+
+  Future<Map<String, dynamic>> getJson(String token, String endpoint) async {
+    final res = await http
+        .get(
+          Uri.parse('$baseUrl/btapi/AdminApp/$endpoint'),
+          headers: _authHeaders(token),
+        )
+        .timeout(_timeout);
+    final decoded = _decodeResponse(res, 'Gagal memuat data.');
+    return (decoded['data'] as Map<String, dynamic>?) ?? const {};
+  }
+
+  Future<String> postAction(
+    String token,
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/btapi/AdminApp/$endpoint'),
+          headers: _authHeaders(token),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 35));
+    final decoded = _decodeResponse(res, 'Aksi gagal.');
+    return (decoded['message'] ?? 'Berhasil.').toString();
+  }
 }

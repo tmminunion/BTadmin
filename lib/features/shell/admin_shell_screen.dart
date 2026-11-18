@@ -4,6 +4,14 @@ import '../../core/admin_session.dart';
 import '../../core/admin_theme.dart';
 import '../../models/admin_models.dart';
 import '../../services/bt_admin_api.dart';
+import '../modules/native_berita_screen.dart';
+import '../modules/native_cerita_screen.dart';
+import '../modules/native_email_survey_screen.dart';
+import '../modules/native_kalender_screen.dart';
+import '../modules/native_logs_screen.dart';
+import '../modules/native_promo_screen.dart';
+import '../modules/native_users_screen.dart';
+import '../modules/native_wanotif_screen.dart';
 import '../webview/admin_webview_screen.dart';
 
 class AdminShellScreen extends StatefulWidget {
@@ -95,6 +103,23 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     );
   }
 
+  static const _nativeKeys = {
+    'home',
+    'control',
+    'apps',
+    'appmenus',
+    'users',
+    'logs',
+    'berita',
+    'cerita',
+    'promo',
+    'kalender',
+    'wanotif',
+    'wanotif_antrean',
+    'email',
+    'survey',
+  };
+
   void _openWebModule(AdminModuleItem mod) {
     final all = _dash?.modules ?? AdminModuleItem.defaults;
     Navigator.of(context).push(
@@ -108,13 +133,86 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     );
   }
 
+  void _openModule(AdminModuleItem mod) {
+    Widget? screen;
+    switch (mod.key) {
+      case 'home':
+        setState(() => _tabIndex = 0);
+        return;
+      case 'control':
+      case 'apps':
+      case 'appmenus':
+        setState(() => _tabIndex = 1);
+        return;
+      case 'users':
+        screen = NativeUsersScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'logs':
+        screen = NativeLogsScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'berita':
+        screen = NativeBeritaScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'cerita':
+        screen = NativeCeritaScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'promo':
+        screen = NativePromoScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'kalender':
+        screen = NativeKalenderScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'wanotif':
+        screen = NativeWanotifScreen(
+          token: widget.session.token,
+          initialTab: 1,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'wanotif_antrean':
+        screen = NativeWanotifScreen(
+          token: widget.session.token,
+          initialTab: 0,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'email':
+        screen = NativeEmailScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'survey':
+        screen = NativeSurveyScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+    }
+    if (screen != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => screen!),
+      );
+      return;
+    }
+    _openWebModule(mod);
+  }
+
   void _openModuleByKey(String key) {
     final all = _dash?.modules ?? AdminModuleItem.defaults;
     final found = all.firstWhere(
       (m) => m.key == key,
       orElse: () => all.first,
     );
-    _openWebModule(found);
+    _openModule(found);
   }
 
   Future<void> _runAction(Future<String> Function() action) async {
@@ -835,9 +933,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             itemCount: filtered.length,
             itemBuilder: (_, idx) {
               final mod = filtered[idx];
+              final isNative = _nativeKeys.contains(mod.key);
               return InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => _openWebModule(mod),
+                onTap: () => _openModule(mod),
                 child: Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
@@ -851,19 +950,42 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AdminColors.gold.withValues(alpha: 0.14),
+                                color: (isNative
+                                        ? AdminColors.emerald
+                                        : AdminColors.gold)
+                                    .withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 mod.iconData,
-                                color: AdminColors.gold,
+                                color: isNative
+                                    ? AdminColors.emerald
+                                    : AdminColors.gold,
                                 size: 22,
                               ),
                             ),
-                            const Icon(
-                              Icons.open_in_new_rounded,
-                              size: 16,
-                              color: AdminColors.textSecondary,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isNative
+                                        ? AdminColors.emerald
+                                        : AdminColors.sky)
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isNative ? 'NATIVE' : 'WEB',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isNative
+                                      ? AdminColors.emerald
+                                      : AdminColors.sky,
+                                ),
+                              ),
                             ),
                           ],
                         ),
