@@ -44,6 +44,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
   bool _sending = false;
   bool _uploadingImg = false;
   bool _balancing = false;
+  bool _deduping = false;
   String _statusFilter = '__active__';
   String _baileyFilter = '';
   Map<String, dynamic> _baileyStats = const {};
@@ -159,6 +160,129 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     } finally {
       if (mounted) setState(() => _balancing = false);
     }
+  }
+
+  Future<void> _confirmDedup(int dupCount) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Antrean Duplikat'),
+        content: Text(
+          'Ditemukan $dupCount pesan duplikat aktif (nomor & isi sama).\n\n'
+          'Sistem akan mempertahankan 1 pesan terawal dan menghapus duplikatnya.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus Duplikat'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _deduping = true);
+    try {
+      final msg = await _api.postAction(widget.token, 'wanotif_action', {
+        'action': 'dedup',
+      });
+      _snack(msg);
+      await _load();
+    } catch (e) {
+      _snack('$e', isError: true);
+    } finally {
+      if (mounted) setState(() => _deduping = false);
+    }
+  }
+
+  Future<void> _showEditDialog(Map<String, dynamic> item) async {
+    final id = int.tryParse('${item['id']}') ?? 0;
+    if (id <= 0) return;
+    final targetCtrl = TextEditingController(
+      text: '${item['target'] ?? item['target_audience'] ?? ''}',
+    );
+    final isiCtrl = TextEditingController(
+      text: '${item['isi'] ?? item['isi_news'] ?? ''}',
+    );
+    int bailey = int.tryParse('${item['bailey'] ?? 1}') ?? 1;
+    if (bailey != 1 && bailey != 2) bailey = 1;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text('Edit Antrean #$id'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: targetCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor / Target WA',
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<int>(
+                  initialValue: bailey,
+                  decoration: const InputDecoration(
+                    labelText: 'Worker Bailey',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 1, child: Text('Bailey 1')),
+                    DropdownMenuItem(value: 2, child: Text('Bailey 2')),
+                  ],
+                  onChanged: (v) => setS(() => bailey = v ?? 1),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: isiCtrl,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Isi Pesan',
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AdminColors.emerald),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved == true) {
+      try {
+        final msg = await _api.postAction(widget.token, 'wanotif_action', {
+          'action': 'update',
+          'id': id,
+          'target': targetCtrl.text.trim(),
+          'isi': isiCtrl.text.trim(),
+          'bailey': bailey,
+        });
+        _snack(msg);
+        await _load();
+      } catch (e) {
+        _snack('$e', isError: true);
+      }
+    }
+    targetCtrl.dispose();
+    isiCtrl.dispose();
   }
 
   String _formatDuration(int sec) {
@@ -312,6 +436,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     final lain = int.tryParse('${_baileyStats['lain'] ?? 0}') ?? 0;
     final numbers = int.tryParse('${_baileyStats['numbers'] ?? 0}') ?? 0;
     final mixed = int.tryParse('${_baileyStats['mixed'] ?? 0}') ?? 0;
+    final dupCount = int.tryParse('${_baileyStats['dup_count'] ?? 0}') ?? 0;
     final activeTotal =
         int.tryParse('${_baileyStats['active_total'] ?? (b1 + b2 + lain)}') ??
             (b1 + b2 + lain);
@@ -412,26 +537,60 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 38,
-            child: OutlinedButton.icon(
-              onPressed: (_balancing || _loading) ? null : _confirmBalance,
-              icon: _balancing
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.shuffle_rounded, size: 17),
-              label: Text(
-                _balancing ? 'Menyeimbangkan...' : 'Balancing Job Bailey 1 & 2',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    onPressed: (_balancing || _loading) ? null : _confirmBalance,
+                    icon: _balancing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.shuffle_rounded, size: 17),
+                    label: Text(
+                      _balancing ? 'Menyeimbangkan...' : 'Balancing Job',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (dupCount > 0) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AdminColors.danger,
+                      side: const BorderSide(color: AdminColors.danger),
+                    ),
+                    onPressed: (_deduping || _loading)
+                        ? null
+                        : () => _confirmDedup(dupCount),
+                    icon: _deduping
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cleaning_services_rounded, size: 16),
+                    label: Text(
+                      'Dedup ($dupCount)',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -583,6 +742,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
+                              onTap: () => _showEditDialog(item),
                               title: Text(
                                 '#$id • $target [$st] • B$bailey',
                                 style: const TextStyle(

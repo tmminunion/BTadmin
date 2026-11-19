@@ -155,6 +155,14 @@ class AdminModuleItem {
       path: '/adminpanel/wanotif/antrean',
     ),
     AdminModuleItem(
+      key: 'wanotif_fcm',
+      category: 'WA & Broadcast',
+      title: 'Push Notifikasi FCM',
+      desc: 'Kirim push notifikasi ke topik & anggota',
+      iconName: 'campaign',
+      path: '/adminpanel/wanotif',
+    ),
+    AdminModuleItem(
       key: 'email',
       category: 'WA & Broadcast',
       title: 'Email SMTP Tester',
@@ -177,6 +185,22 @@ class AdminModuleItem {
       desc: 'Riwayat autentikasi aplikasi mobile & web',
       iconName: 'history',
       path: '/adminpanel/logs',
+    ),
+    AdminModuleItem(
+      key: 'applogin',
+      category: 'Anggota & Akses',
+      title: 'Sesi App Login',
+      desc: 'Pantau sesi login aplikasi mobile & token aktif',
+      iconName: 'vpn_key',
+      path: '/adminpanel/applogin',
+    ),
+    AdminModuleItem(
+      key: 'feedback',
+      category: 'Anggota & Akses',
+      title: 'Saran & Feedback App',
+      desc: 'Moderasi masukan & laporan bug dari pengguna',
+      iconName: 'feedback',
+      path: '/adminpanel/feedback',
     ),
     AdminModuleItem(
       key: 'msadmin',

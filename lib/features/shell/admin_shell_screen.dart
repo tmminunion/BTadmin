@@ -219,7 +219,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           initialTab: 2,
         );
       default:
-        screen = NativeSystemModuleScreen(module: mod);
+        _openWebModule(mod);
+        return;
     }
     final target = screen;
     Navigator.of(context).push(
