@@ -31,3 +31,10 @@ migrate_working_dir/
 *.apk
 *.aab
 *.ap_
+
+# Secrets & Keystores
+*.jks
+*.keystore
+key.properties
+.env
+.env.*

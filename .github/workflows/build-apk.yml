@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   actions: write
 
 jobs:
@@ -131,18 +131,51 @@ jobs:
           flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols
           cp build/app/outputs/flutter-apk/app-release.apk "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v${{ steps.meta.outputs.version_name }}+${{ steps.meta.outputs.version_code }}"
-          name: "BTadmin v${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.version_code }})"
-          body: |
-            Rilis resmi **BTadmin** — Aplikasi Kontrol Admin Panel Bungtemin.
-            - Dashboard & Statistik Real-Time Native
-            - Kontrol Layanan, Protokoler Global, Microsoft SSO, & Menu Aplikasi Native
-            - Kontrol WA Notifikasi & Antrean Native
-            - 23 Modul Admin Panel via In-App WebView (Tiket 1x pakai 60 detik)
-          files: "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
+      - name: Upload APK to Google Drive (NUDB)
+        env:
+          GDRIVE_API_KEY: ${{ secrets.GDRIVE_API_KEY }}
+          GDRIVE_APK_FOLDER_ID: ${{ secrets.GDRIVE_APK_FOLDER_ID }}
+          APK_FILE: "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
+          VER_NAME: ${{ steps.meta.outputs.version_name }}
+          VER_CODE: ${{ steps.meta.outputs.version_code }}
+        run: |
+          if [ -z "$GDRIVE_API_KEY" ]; then
+            echo "GDRIVE_API_KEY tidak diset; melewati upload Google Drive."
+            exit 0
+          fi
+          if [ ! -f "$APK_FILE" ]; then
+            echo "File APK tidak ditemukan."
+            exit 1
+          fi
+
+          CURL_ARGS=(
+            -sS -w "\n%{http_code}" -X POST
+            "https://nudb.bungtemin.net/api/gdrive/upload"
+            -H "x-gdrive-key: ${GDRIVE_API_KEY}"
+            -F "file=@${APK_FILE}"
+            -F "name=${APK_FILE}"
+            -F "description=BTadmin v${VER_NAME} (build ${VER_CODE})"
+          )
+          if [ -n "$GDRIVE_APK_FOLDER_ID" ]; then
+            CURL_ARGS+=(-F "folderId=${GDRIVE_APK_FOLDER_ID}")
+          fi
+
+          RESP=$(curl "${CURL_ARGS[@]}")
+          HTTP_CODE=$(printf "%s" "$RESP" | tail -n1)
+          BODY=$(printf "%s" "$RESP" | sed '$d')
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            GDRIVE_URL=$(printf "%s" "$BODY" | python3 -c 'import sys, json; d=json.load(sys.stdin); it=d.get("item") or {}; print(it.get("proxyUrl") or (f"https://nudb.bungtemin.net/gdrive/file/{it[\"id\"]}" if it.get("id") else ""))')
+            if [ -n "$GDRIVE_URL" ]; then
+              echo "::add-mask::${GDRIVE_URL}"
+              echo "GDRIVE_URL=${GDRIVE_URL}" >> "$GITHUB_ENV"
+              echo "Upload APK ke Google Drive (NUDB) berhasil."
+            else
+              echo "Upload selesai, tetapi URL tidak ditemukan di respons."
+            fi
+          else
+            echo "Upload APK ke Google Drive gagal (HTTP ${HTTP_CODE})."
+          fi
 
       - name: Send APK to Telegram
         if: always()
@@ -152,9 +185,14 @@ jobs:
           APK_FILE: "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
         run: |
           if [ -f "$APK_FILE" ] && [ -n "$BOT_TOKEN" ] && [ -n "$CHAT_ID" ]; then
+            CAPTION="🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild!"
+            if [ -n "${GDRIVE_URL:-}" ]; then
+              CAPTION="${CAPTION}
+          📥 Drive: ${GDRIVE_URL}"
+            fi
             curl -s -F "chat_id=${CHAT_ID}" \
               -F "document=@${APK_FILE}" \
-              -F "caption=🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild & dirilis di GitHub Release!" \
+              -F "caption=${CAPTION}" \
               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" > /dev/null
           fi
 
