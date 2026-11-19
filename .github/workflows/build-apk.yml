@@ -192,9 +192,7 @@ jobs:
           if [ -f "$APK_FILE" ]; then
             SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(wc -c < "$APK_FILE")/1048576}")
             if [ -n "${GDRIVE_URL:-}" ]; then
-              MSG="🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild!
-📦 File: ${APK_FILE} (${SIZE_MB} MB)
-📥 Download: ${GDRIVE_URL}"
+              MSG=$(printf "🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild!\n📦 File: %s (%s MB)\n📥 Download: %s" "${APK_FILE}" "${SIZE_MB}" "${GDRIVE_URL}")
             else
               MSG="⚠️ BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) selesai dibuild (${SIZE_MB} MB), namun upload ke Google Drive gagal."
             fi
