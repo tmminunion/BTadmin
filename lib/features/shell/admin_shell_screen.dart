@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/admin_session.dart';
 import '../../core/admin_theme.dart';
+import '../../core/date_format.dart';
 import '../../models/admin_models.dart';
 import '../../services/bt_admin_api.dart';
 import '../modules/native_berita_screen.dart';
@@ -650,7 +651,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 3),
                 child: Text(
-                  '${log.via} • ${log.device}\n${log.createdAt}',
+                  '${log.via} • ${log.device}'
+                  '${log.ipAddress.isNotEmpty ? '\nIP: ${log.ipAddress}' : ''}'
+                  '\n${formatDateDdMmYyyy(log.createdAt)}',
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: AdminColors.textSecondary,

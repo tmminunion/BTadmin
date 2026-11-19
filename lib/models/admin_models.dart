@@ -328,6 +328,7 @@ class AdminLoginLogItem {
   const AdminLoginLogItem({
     required this.noreg,
     required this.nama,
+    required this.ipAddress,
     required this.via,
     required this.device,
     required this.success,
@@ -336,6 +337,7 @@ class AdminLoginLogItem {
 
   final String noreg;
   final String nama;
+  final String ipAddress;
   final String via;
   final String device;
   final bool success;
@@ -345,6 +347,7 @@ class AdminLoginLogItem {
     return AdminLoginLogItem(
       noreg: (j['noreg'] ?? '').toString(),
       nama: (j['nama'] ?? '').toString(),
+      ipAddress: (j['ip_address'] ?? '').toString(),
       via: (j['via'] ?? '').toString(),
       device: (j['device'] ?? '').toString(),
       success: j['success'] == true || j['success'] == 1,
