@@ -149,7 +149,7 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
                                             color: st == 'selesai'
                                                 ? AdminColors.emerald
                                                     .withValues(alpha: 0.16)
-                                                : AdminColors.amber
+                                                : const Color(0xFFF59E0B)
                                                     .withValues(alpha: 0.16),
                                             borderRadius:
                                                 BorderRadius.circular(999),
@@ -161,7 +161,7 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
                                               fontWeight: FontWeight.w800,
                                               color: st == 'selesai'
                                                   ? AdminColors.emerald
-                                                  : AdminColors.amber,
+                                                  : const Color(0xFFF59E0B),
                                             ),
                                           ),
                                         ),
@@ -386,7 +386,7 @@ class _NativeAnalyticsScreenState extends State<NativeAnalyticsScreen> {
     final cards = [
       ('Total User Terdaftar', '${_stats['users_total'] ?? 0}', Icons.people_rounded, AdminColors.sky),
       ('Login 7 Hari Terakhir', '${_stats['logins_7d'] ?? 0}', Icons.login_rounded, AdminColors.emerald),
-      ('Antrean WA Aktif', '${_stats['wa_pending'] ?? 0}', Icons.chat_rounded, AdminColors.amber),
+      ('Antrean WA Aktif', '${_stats['wa_pending'] ?? 0}', Icons.chat_rounded, const Color(0xFFF59E0B)),
       ('Saran App Baru', '${_stats['feedback_baru'] ?? 0}', Icons.comment_rounded, AdminColors.indigo),
       ('Total Meeting', '${_stats['meetings_total'] ?? 0}', Icons.event_rounded, AdminColors.gold),
     ];

@@ -136,7 +136,7 @@ class AdminModuleItem {
       title: 'Saran Aplikasi',
       desc: 'Pantau masukan UX, bug & ide fitur dari anggota',
       path: '/adminpanel/feedback',
-      icon: 'comment',
+      iconName: 'comment',
     ),
     AdminModuleItem(
       key: 'wanotif',

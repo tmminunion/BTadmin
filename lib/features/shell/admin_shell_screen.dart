@@ -221,8 +221,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       default:
         screen = NativeSystemModuleScreen(module: mod);
     }
+    final target = screen;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => screen),
+      MaterialPageRoute<void>(builder: (_) => target),
     );
   }
 
@@ -1427,47 +1428,7 @@ class _QuickActionTile extends StatelessWidget {
       ),
     );
   }
-}
 
-class _GlobalSegmentBtn extends StatelessWidget {
-  const _GlobalSegmentBtn({
-    required this.label,
-    required this.active,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: active ? color.withValues(alpha: 0.2) : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-            border: active ? Border.all(color: color.withValues(alpha: 0.7)) : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: active ? color : AdminColors.textSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSidebarDrawer(AdminDashboardData? dash) {
     final modules = List<AdminModuleItem>.from(
@@ -1481,7 +1442,7 @@ class _GlobalSegmentBtn extends StatelessWidget {
           title: 'Saran Aplikasi',
           desc: 'Masukan UX, bug & ide fitur dari anggota',
           path: '/adminpanel/feedback',
-          icon: 'comment',
+          iconName: 'comment',
         ),
       );
     }
@@ -1493,7 +1454,7 @@ class _GlobalSegmentBtn extends StatelessWidget {
           title: 'Push Notifikasi FCM',
           desc: 'Broadcast push notif & gambar ke HP anggota',
           path: '/adminpanel/wanotif',
-          icon: 'bell',
+          iconName: 'bell',
         ),
       );
     }
@@ -1664,6 +1625,48 @@ class _GlobalSegmentBtn extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GlobalSegmentBtn extends StatelessWidget {
+  const _GlobalSegmentBtn({
+    required this.label,
+    required this.active,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? color.withValues(alpha: 0.2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: active ? Border.all(color: color.withValues(alpha: 0.7)) : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: active ? color : AdminColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
 }
 
