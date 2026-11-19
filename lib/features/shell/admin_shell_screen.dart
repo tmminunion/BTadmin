@@ -341,6 +341,202 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
+  Widget _buildSidebarDrawer(AdminDashboardData? dash) {
+    final modules = List<AdminModuleItem>.from(
+      dash?.modules.isNotEmpty == true ? dash!.modules : AdminModuleItem.defaults,
+    );
+    if (!modules.any((m) => m.key == 'feedback')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'feedback',
+          category: 'Komunikasi & Saran',
+          title: 'Saran Aplikasi',
+          desc: 'Masukan UX, bug & ide fitur dari anggota',
+          path: '/adminpanel/feedback',
+          iconName: 'comment',
+        ),
+      );
+    }
+    if (!modules.any((m) => m.key == 'wanotif_fcm')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'wanotif_fcm',
+          category: 'WA & Broadcast',
+          title: 'Push Notifikasi FCM',
+          desc: 'Broadcast push notif & gambar ke HP anggota',
+          path: '/adminpanel/wanotif',
+          iconName: 'bell',
+        ),
+      );
+    }
+
+    final grouped = <String, List<AdminModuleItem>>{};
+    for (final m in modules) {
+      grouped.putIfAbsent(m.category, () => []).add(m);
+    }
+
+    IconData iconFor(String key) {
+      switch (key) {
+        case 'home':
+          return Icons.space_dashboard_rounded;
+        case 'control':
+        case 'apps':
+          return Icons.public_rounded;
+        case 'appmenus':
+          return Icons.apps_rounded;
+        case 'menus':
+          return Icons.account_tree_rounded;
+        case 'promo':
+          return Icons.campaign_rounded;
+        case 'wanotif':
+          return Icons.chat_rounded;
+        case 'wanotif_antrean':
+          return Icons.playlist_add_check_rounded;
+        case 'wanotif_fcm':
+          return Icons.notifications_active_rounded;
+        case 'feedback':
+          return Icons.rate_review_rounded;
+        case 'email':
+          return Icons.email_rounded;
+        case 'users':
+          return Icons.manage_accounts_rounded;
+        case 'logs':
+          return Icons.history_rounded;
+        case 'berita':
+          return Icons.newspaper_rounded;
+        case 'cerita':
+          return Icons.movie_creation_rounded;
+        case 'kalender':
+          return Icons.calendar_month_rounded;
+        case 'survey':
+          return Icons.poll_rounded;
+        case 'analytics':
+          return Icons.analytics_rounded;
+        default:
+          return Icons.settings_applications_rounded;
+      }
+    }
+
+    return Drawer(
+      backgroundColor: AdminColors.surface,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+              decoration: const BoxDecoration(
+                gradient: AdminColors.heroGradient,
+                border: Border(bottom: BorderSide(color: AdminColors.border)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AdminColors.gold.withValues(alpha: 0.18),
+                    child: Text(
+                      _initials(widget.session.nama),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: AdminColors.gold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.session.nama,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14.5,
+                            color: AdminColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${widget.session.noreg} • ${widget.session.job}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AdminColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                children: [
+                  for (final entry in grouped.entries) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 12, 10, 4),
+                      child: Text(
+                        entry.key.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.9,
+                          color: AdminColors.gold,
+                        ),
+                      ),
+                    ),
+                    for (final mod in entry.value)
+                      ListTile(
+                        dense: true,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        leading: Icon(
+                          iconFor(mod.key),
+                          size: 20,
+                          color: AdminColors.sky,
+                        ),
+                        title: Text(
+                          mod.title,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AdminColors.textPrimary,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _openModule(mod);
+                        },
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onLogout();
+                  },
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Keluar Sesi'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dash = _dash;
@@ -1430,201 +1626,6 @@ class _QuickActionTile extends StatelessWidget {
   }
 
 
-  Widget _buildSidebarDrawer(AdminDashboardData? dash) {
-    final modules = List<AdminModuleItem>.from(
-      dash?.modules.isNotEmpty == true ? dash!.modules : AdminModuleItem.defaults,
-    );
-    if (!modules.any((m) => m.key == 'feedback')) {
-      modules.add(
-        const AdminModuleItem(
-          key: 'feedback',
-          category: 'Komunikasi & Saran',
-          title: 'Saran Aplikasi',
-          desc: 'Masukan UX, bug & ide fitur dari anggota',
-          path: '/adminpanel/feedback',
-          iconName: 'comment',
-        ),
-      );
-    }
-    if (!modules.any((m) => m.key == 'wanotif_fcm')) {
-      modules.add(
-        const AdminModuleItem(
-          key: 'wanotif_fcm',
-          category: 'WA & Broadcast',
-          title: 'Push Notifikasi FCM',
-          desc: 'Broadcast push notif & gambar ke HP anggota',
-          path: '/adminpanel/wanotif',
-          iconName: 'bell',
-        ),
-      );
-    }
-
-    final grouped = <String, List<AdminModuleItem>>{};
-    for (final m in modules) {
-      grouped.putIfAbsent(m.category, () => []).add(m);
-    }
-
-    IconData iconFor(String key) {
-      switch (key) {
-        case 'home':
-          return Icons.space_dashboard_rounded;
-        case 'control':
-        case 'apps':
-          return Icons.public_rounded;
-        case 'appmenus':
-          return Icons.apps_rounded;
-        case 'menus':
-          return Icons.account_tree_rounded;
-        case 'promo':
-          return Icons.campaign_rounded;
-        case 'wanotif':
-          return Icons.chat_rounded;
-        case 'wanotif_antrean':
-          return Icons.playlist_add_check_rounded;
-        case 'wanotif_fcm':
-          return Icons.notifications_active_rounded;
-        case 'feedback':
-          return Icons.rate_review_rounded;
-        case 'email':
-          return Icons.email_rounded;
-        case 'users':
-          return Icons.manage_accounts_rounded;
-        case 'logs':
-          return Icons.history_rounded;
-        case 'berita':
-          return Icons.newspaper_rounded;
-        case 'cerita':
-          return Icons.movie_creation_rounded;
-        case 'kalender':
-          return Icons.calendar_month_rounded;
-        case 'survey':
-          return Icons.poll_rounded;
-        case 'analytics':
-          return Icons.analytics_rounded;
-        default:
-          return Icons.settings_applications_rounded;
-      }
-    }
-
-    return Drawer(
-      backgroundColor: AdminColors.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-              decoration: const BoxDecoration(
-                gradient: AdminColors.heroGradient,
-                border: Border(bottom: BorderSide(color: AdminColors.border)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AdminColors.gold.withValues(alpha: 0.18),
-                    child: Text(
-                      _initials(widget.session.nama),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: AdminColors.gold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.session.nama,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14.5,
-                            color: AdminColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          '${widget.session.noreg} • ${widget.session.job}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AdminColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                children: [
-                  for (final entry in grouped.entries) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 12, 10, 4),
-                      child: Text(
-                        entry.key.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.9,
-                          color: AdminColors.gold,
-                        ),
-                      ),
-                    ),
-                    for (final mod in entry.value)
-                      ListTile(
-                        dense: true,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        leading: Icon(
-                          iconFor(mod.key),
-                          size: 20,
-                          color: AdminColors.sky,
-                        ),
-                        title: Text(
-                          mod.title,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: AdminColors.textPrimary,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _openModule(mod);
-                        },
-                      ),
-                  ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onLogout();
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: const Text('Keluar Sesi'),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _GlobalSegmentBtn extends StatelessWidget {
