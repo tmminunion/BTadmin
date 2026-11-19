@@ -2,8 +2,8 @@ import 'package:btadmin/models/admin_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Katalog default memuat seluruh 23 modul adminpanel', () {
-    expect(AdminModuleItem.defaults.length, 23);
+  test('Katalog default memuat seluruh 24 modul adminpanel', () {
+    expect(AdminModuleItem.defaults.length, 24);
     final paths = AdminModuleItem.defaults.map((m) => m.path).toSet();
     expect(paths.contains('/adminpanel/home'), isTrue);
     expect(paths.contains('/adminpanel/control'), isTrue);
@@ -28,6 +28,6 @@ void main() {
     expect(dash.ssoEnabled, isTrue);
     expect(dash.waPauseKta, isTrue);
     expect(dash.waQueueTotal, 12);
-    expect(dash.modules.length, 23);
+    expect(dash.modules.length, 24);
   });
 }
