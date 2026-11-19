@@ -36,6 +36,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   final _searchCtrl = TextEditingController();
 
   int _tabIndex = 0;
+  int _controlSubTab = 0;
   AdminDashboardData? _dash;
   bool _loading = true;
   bool _busyAction = false;
@@ -142,8 +143,16 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         return;
       case 'control':
       case 'apps':
+        setState(() {
+          _tabIndex = 1;
+          _controlSubTab = 0;
+        });
+        return;
       case 'appmenus':
-        setState(() => _tabIndex = 1);
+        setState(() {
+          _tabIndex = 1;
+          _controlSubTab = 1;
+        });
         return;
       case 'users':
         screen = NativeUsersScreen(
@@ -674,6 +683,26 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
+        SegmentedButton<int>(
+          segments: const [
+            ButtonSegment<int>(
+              value: 0,
+              label: Text('Kontrol Web'),
+              icon: Icon(Icons.public_rounded, size: 17),
+            ),
+            ButtonSegment<int>(
+              value: 1,
+              label: Text('Menu Aplikasi'),
+              icon: Icon(Icons.apps_rounded, size: 17),
+            ),
+          ],
+          selected: {_controlSubTab},
+          onSelectionChanged: (sel) {
+            setState(() => _controlSubTab = sel.first);
+          },
+        ),
+        const SizedBox(height: 14),
+        if (_controlSubTab == 0) ...[
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -783,23 +812,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           ),
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const _SectionHeader(
-              title: 'Layanan Web & API',
-              subtitle: 'Ubah status per modul layanan',
-            ),
-            TextButton(
-              onPressed: () => _openWebModule(
-                dash.modules.firstWhere(
-                  (m) => m.key == 'control',
-                  orElse: () => dash.modules.first,
-                ),
-              ),
-              child: const Text('Versi Web'),
-            ),
-          ],
+        const _SectionHeader(
+          title: 'Layanan Web & API',
+          subtitle: 'Ubah status per modul layanan web',
         ),
         const SizedBox(height: 6),
         ...dash.services.map(
@@ -857,25 +872,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             ),
           ),
         ),
-        if (dash.appMenus.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const _SectionHeader(
-                title: 'Menu Aplikasi Flutter',
-                subtitle: 'Visibilitas menu di aplikasi member',
-              ),
-              TextButton(
-                onPressed: () => _openWebModule(
-                  dash.modules.firstWhere(
-                    (m) => m.key == 'appmenus',
-                    orElse: () => dash.modules.first,
-                  ),
-                ),
-                child: const Text('Atur Lengkap'),
-              ),
-            ],
+        ] else ...[
+          const _SectionHeader(
+            title: 'Menu Aplikasi Flutter',
+            subtitle: 'Kontrol ON / Maintenance / OFF menu aplikasi member',
           ),
           const SizedBox(height: 6),
           ...dash.appMenus.map(

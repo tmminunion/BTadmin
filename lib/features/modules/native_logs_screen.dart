@@ -352,15 +352,67 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                           formattedDate,
                         ];
 
+                        final rawNoreg = (log['noreg'] ?? '').toString().replaceAll(RegExp(r'\D+'), '');
+                        final noreg8 = rawNoreg.isNotEmpty ? rawNoreg.padLeft(8, '0') : '';
+                        final avatarUrl = noreg8.isNotEmpty
+                            ? 'https://bungtemin.net/btapi/img/avatar/$noreg8'
+                            : '';
+                        final namaStr = (log['nama'] ?? '').toString().trim();
+                        final initial = namaStr.isNotEmpty ? namaStr[0].toUpperCase() : 'A';
+
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: Icon(
-                              ok
-                                  ? Icons.check_circle_rounded
-                                  : Icons.cancel_rounded,
-                              color:
-                                  ok ? AdminColors.emerald : AdminColors.danger,
+                            leading: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: AdminColors.surface,
+                                  child: ClipOval(
+                                    child: avatarUrl.isNotEmpty
+                                        ? Image.network(
+                                            avatarUrl,
+                                            width: 44,
+                                            height: 44,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Text(
+                                              initial,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                color: AdminColors.textPrimary,
+                                              ),
+                                            ),
+                                          )
+                                        : Text(
+                                            initial,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              color: AdminColors.textPrimary,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: -2,
+                                  bottom: -2,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: AdminColors.card,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      ok
+                                          ? Icons.check_circle_rounded
+                                          : Icons.cancel_rounded,
+                                      size: 15,
+                                      color: ok
+                                          ? AdminColors.emerald
+                                          : AdminColors.danger,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             title: Text(
                               '${log['nama']} (${log['noreg']})',
