@@ -131,6 +131,14 @@ class AdminModuleItem {
       path: '/adminpanel/promo',
     ),
     AdminModuleItem(
+      key: 'feedback',
+      category: 'Komunikasi & Saran',
+      title: 'Saran Aplikasi',
+      desc: 'Pantau masukan UX, bug & ide fitur dari anggota',
+      path: '/adminpanel/feedback',
+      icon: 'comment',
+    ),
+    AdminModuleItem(
       key: 'wanotif',
       category: 'WA & Broadcast',
       title: 'WA Broadcast Center',

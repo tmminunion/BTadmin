@@ -12,6 +12,7 @@ import '../modules/native_kalender_screen.dart';
 import '../modules/native_logs_screen.dart';
 import '../modules/native_promo_screen.dart';
 import '../modules/native_users_screen.dart';
+import '../modules/native_extra_screens.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../webview/admin_webview_screen.dart';
 
@@ -206,14 +207,23 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           token: widget.session.token,
           onOpenWeb: () => _openWebModule(mod),
         );
+      case 'feedback':
+        screen = NativeFeedbackScreen(token: widget.session.token);
+      case 'menus':
+        screen = NativeMenusScreen(token: widget.session.token);
+      case 'analytics':
+        screen = NativeAnalyticsScreen(token: widget.session.token);
+      case 'wanotif_fcm':
+        screen = NativeWanotifScreen(
+          token: widget.session.token,
+          initialTab: 2,
+        );
+      default:
+        screen = NativeSystemModuleScreen(module: mod);
     }
-    if (screen != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => screen!),
-      );
-      return;
-    }
-    _openWebModule(mod);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
   }
 
   void _openModuleByKey(String key) {

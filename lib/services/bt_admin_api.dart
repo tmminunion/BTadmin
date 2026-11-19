@@ -308,6 +308,34 @@ class BtAdminApi {
     );
   }
 
+  Future<String> uploadBroadcastImage(
+    String token,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/btapi/AdminApp/upload_broadcast_image'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'filename': filename,
+            'image_base64': base64Encode(bytes),
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300 && body['status'] == 'success') {
+      return (body['url'] ?? '').toString();
+    }
+    throw BtAdminApiException(
+      (body['message'] ?? 'Gagal upload gambar').toString(),
+      statusCode: res.statusCode,
+    );
+  }
+
   Future<Map<String, dynamic>> getJson(String token, String endpoint) async {
     final res = await http
         .get(
