@@ -177,24 +177,35 @@ jobs:
             echo "Upload APK ke Google Drive gagal (HTTP ${HTTP_CODE})."
           fi
 
-      - name: Send APK to Telegram
+      - name: Send APK Link to Telegram
         if: always()
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           APK_FILE: "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
         run: |
-          if [ -f "$APK_FILE" ] && [ -n "$BOT_TOKEN" ] && [ -n "$CHAT_ID" ]; then
-            CAPTION="🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild!"
-            if [ -n "${GDRIVE_URL:-}" ]; then
-              CAPTION="${CAPTION}
-          📥 Drive: ${GDRIVE_URL}"
-            fi
-            curl -s -F "chat_id=${CHAT_ID}" \
-              -F "document=@${APK_FILE}" \
-              -F "caption=${CAPTION}" \
-              "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" > /dev/null
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "Secret Telegram belum diset; melewati notifikasi."
+            exit 0
           fi
+
+          if [ -f "$APK_FILE" ]; then
+            SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(wc -c < "$APK_FILE")/1048576}")
+            if [ -n "${GDRIVE_URL:-}" ]; then
+              MSG="🚀 BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) berhasil dibuild!
+📦 File: ${APK_FILE} (${SIZE_MB} MB)
+📥 Download: ${GDRIVE_URL}"
+            else
+              MSG="⚠️ BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) selesai dibuild (${SIZE_MB} MB), namun upload ke Google Drive gagal."
+            fi
+          else
+            MSG="❌ Build BTadmin v${{ steps.meta.outputs.version_name }} (code ${{ steps.meta.outputs.version_code }}) gagal menghasilkan file APK."
+          fi
+
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MSG}" \
+            --data-urlencode "disable_web_page_preview=true" > /dev/null
 
       - name: Cleanup Temporary Files & Workflow Artifacts
         if: always()
