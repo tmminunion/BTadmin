@@ -43,7 +43,10 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
   bool _loading = true;
   bool _sending = false;
   bool _uploadingImg = false;
+  bool _balancing = false;
   String _statusFilter = '__active__';
+  String _baileyFilter = '';
+  Map<String, dynamic> _baileyStats = const {};
   List<Map<String, dynamic>> _items = const [];
 
   @override
@@ -86,12 +89,15 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     try {
       final q = Uri.encodeQueryComponent(_qCtrl.text.trim());
       final st = Uri.encodeQueryComponent(_statusFilter);
+      final bl = Uri.encodeQueryComponent(_baileyFilter);
       final data = await _api.getJson(
         widget.token,
-        'wanotif_queue?status=$st&q=$q',
+        'wanotif_queue?status=$st&bailey=$bl&q=$q',
       );
       if (!mounted) return;
+      final stats = data['bailey_stats'];
       setState(() {
+        _baileyStats = stats is Map<String, dynamic> ? stats : const {};
         _items = (data['items'] as List?)
                 ?.whereType<Map<String, dynamic>>()
                 .toList() ??
@@ -116,6 +122,72 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     } catch (e) {
       _snack('$e', isError: true);
     }
+  }
+
+  Future<void> _confirmBalance() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Balance Job Bailey 1 & 2'),
+        content: const Text(
+          'Seimbangkan antrean aktif antara Bailey 1 dan Bailey 2?\n\n'
+          'Semua pesan untuk satu nomor tujuan akan tetap berada di Bailey yang sama.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.emerald),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Balance Sekarang'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _balancing = true);
+    try {
+      final msg = await _api.postAction(widget.token, 'wanotif_action', {
+        'action': 'balance',
+      });
+      _snack(msg);
+      await _load();
+    } catch (e) {
+      _snack('$e', isError: true);
+    } finally {
+      if (mounted) setState(() => _balancing = false);
+    }
+  }
+
+  String _formatDuration(int sec) {
+    if (sec <= 0) return '0 menit';
+    final d = sec ~/ 86400;
+    final h = (sec % 86400) ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    final parts = <String>[];
+    if (d > 0) parts.add('$d hari');
+    if (h > 0) parts.add('$h jam');
+    if (m > 0 || (d == 0 && h == 0)) parts.add('$m mnt');
+    return parts.join(' ');
+  }
+
+  String _formatWibEta(int etaSec) {
+    if (etaSec <= 0) return 'Selesai sekarang';
+    final wib = DateTime.now()
+        .toUtc()
+        .add(const Duration(hours: 7))
+        .add(Duration(seconds: etaSec));
+    final hh = wib.hour.toString().padLeft(2, '0');
+    final mm = wib.minute.toString().padLeft(2, '0');
+    final dd = wib.day.toString().padLeft(2, '0');
+    final mo = wib.month.toString().padLeft(2, '0');
+    final nowWib = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final sameDay = wib.day == nowWib.day &&
+        wib.month == nowWib.month &&
+        wib.year == nowWib.year;
+    return sameDay ? '± $hh:$mm WIB' : '± $dd/$mo $hh:$mm WIB';
   }
 
   Future<void> _pickAndUploadImage(TextEditingController targetCtrl) async {
@@ -234,11 +306,178 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     );
   }
 
+  Widget _buildBaileyOverviewCard() {
+    final b1 = int.tryParse('${_baileyStats['b1'] ?? 0}') ?? 0;
+    final b2 = int.tryParse('${_baileyStats['b2'] ?? 0}') ?? 0;
+    final lain = int.tryParse('${_baileyStats['lain'] ?? 0}') ?? 0;
+    final numbers = int.tryParse('${_baileyStats['numbers'] ?? 0}') ?? 0;
+    final mixed = int.tryParse('${_baileyStats['mixed'] ?? 0}') ?? 0;
+    final activeTotal =
+        int.tryParse('${_baileyStats['active_total'] ?? (b1 + b2 + lain)}') ??
+            (b1 + b2 + lain);
+    final etaSec = int.tryParse('${_baileyStats['eta_sec'] ?? 0}') ?? 0;
+    final pauseAll = _baileyStats['pause_all'] == true;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AdminColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AdminColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.balance_rounded,
+                size: 18,
+                color: AdminColors.sky,
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Beban Bailey & Estimasi',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ),
+              if (pauseAll)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AdminColors.danger.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'PAUSED',
+                    style: TextStyle(
+                      color: AdminColors.danger,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _baileyCountBox('Bailey 1', b1, AdminColors.sky),
+              const SizedBox(width: 8),
+              _baileyCountBox('Bailey 2', b2, AdminColors.emerald),
+              if (lain > 0) ...[
+                const SizedBox(width: 8),
+                _baileyCountBox('Lainnya', lain, AdminColors.gold),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                size: 15,
+                color: AdminColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  activeTotal == 0
+                      ? 'Tidak ada antrean aktif'
+                      : 'Estimasi: ${_formatDuration(etaSec)} (${_formatWibEta(etaSec)})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$activeTotal pesan aktif • $numbers nomor tujuan (~23 mnt/pesan per Bailey)'
+            '${mixed > 0 ? ' • $mixed nomor terpecah!' : ''}',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: mixed > 0 ? AdminColors.danger : AdminColors.textSecondary,
+              fontWeight: mixed > 0 ? FontWeight.w700 : FontWeight.normal,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: OutlinedButton.icon(
+              onPressed: (_balancing || _loading) ? null : _confirmBalance,
+              icon: _balancing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.shuffle_rounded, size: 17),
+              label: Text(
+                _balancing ? 'Menyeimbangkan...' : 'Balancing Job Bailey 1 & 2',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _baileyCountBox(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count antrean',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildQueueTab() {
     return Column(
       children: [
+        _buildBaileyOverviewCard(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Row(
             children: [
               Expanded(
@@ -295,6 +534,23 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                     },
                   ),
                 ),
+              const SizedBox(width: 6),
+              for (final (bVal, bLbl) in [
+                ('', 'Semua Bailey'),
+                ('1', 'Bailey 1'),
+                ('2', 'Bailey 2'),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(bLbl),
+                    selected: _baileyFilter == bVal,
+                    onSelected: (_) {
+                      setState(() => _baileyFilter = bVal);
+                      _load();
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -317,14 +573,18 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                         itemBuilder: (_, idx) {
                           final item = _items[idx];
                           final id = int.tryParse('${item['id']}') ?? 0;
-                          final target = '${item['target_audience'] ?? ''}';
+                          final target =
+                              '${item['target'] ?? item['target_audience'] ?? ''}';
                           final st = '${item['status'] ?? ''}';
-                          final msg = '${item['isi_news'] ?? ''}';
+                          final bailey =
+                              int.tryParse('${item['bailey'] ?? 1}') ?? 1;
+                          final msg =
+                              '${item['isi'] ?? item['isi_news'] ?? ''}';
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               title: Text(
-                                '#$id • $target [$st]',
+                                '#$id • $target [$st] • B$bailey',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13.5,
