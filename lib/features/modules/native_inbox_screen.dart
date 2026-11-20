@@ -32,6 +32,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
   final _attUrlCtrl = TextEditingController();
   final _attLabelCtrl = TextEditingController();
   final _actionLabelCtrl = TextEditingController();
+  final _webhookCtrl = TextEditingController();
 
   String _category = 'pengumuman';
   String _targetGroup = 'all';
@@ -54,6 +55,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
     _attUrlCtrl.dispose();
     _attLabelCtrl.dispose();
     _actionLabelCtrl.dispose();
+    _webhookCtrl.dispose();
     for (final f in _fields) {
       f.dispose();
     }
@@ -89,7 +91,43 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
     }
   }
 
-  Future<void> _sendBroadcast() async {
+  void _loadPreset(Map<String, dynamic> item) {
+    _titleCtrl.text = '${item['title'] ?? ''}';
+    _bodyCtrl.text = '${item['body'] ?? ''}';
+    _customCtrl.text = '${item['target_noregs'] ?? ''}';
+    _attUrlCtrl.text = '${item['attachment_url'] ?? ''}';
+    _attLabelCtrl.text = '${item['attachment_label'] ?? ''}';
+    _actionLabelCtrl.text = '${item['action_label'] ?? ''}';
+    _webhookCtrl.text = '${item['webhook_url'] ?? ''}';
+    for (final f in _fields) {
+      f.dispose();
+    }
+    _fields.clear();
+    final rawSchema = item['form_schema'];
+    if (rawSchema is List) {
+      for (final raw in rawSchema.whereType<Map>()) {
+        final f = _FormFieldDraft(
+          keyName: '${raw['key'] ?? 'q_${_fields.length + 1}'}',
+        );
+        f.labelCtrl.text = '${raw['label'] ?? ''}';
+        f.type = '${raw['type'] ?? 'text'}';
+        f.required = raw['required'] != false;
+        if (raw['options'] is List) {
+          f.optionsCtrl.text =
+              (raw['options'] as List).map((e) => e.toString()).join(', ');
+        }
+        _fields.add(f);
+      }
+    }
+    setState(() {
+      _category = '${item['category'] ?? 'pengumuman'}';
+      _targetGroup = '${item['target_group'] ?? 'all'}';
+    });
+    _tab.animateTo(1);
+    _snack('Template/broadcast dimuat ke editor.');
+  }
+
+  Future<void> _sendBroadcast({bool isTemplate = false}) async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       _snack('Judul broadcast wajib diisi.', isError: true);
@@ -112,7 +150,9 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
         'attachment_label': _attLabelCtrl.text.trim(),
         'action_label': _actionLabelCtrl.text.trim(),
         'form_schema': schema,
-        'send_fcm': _sendFcm,
+        'webhook_url': _webhookCtrl.text.trim(),
+        'is_template': isTemplate,
+        'send_fcm': isTemplate ? false : _sendFcm,
       });
       _snack(msg);
       _titleCtrl.clear();
@@ -121,6 +161,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
       _attUrlCtrl.clear();
       _attLabelCtrl.clear();
       _actionLabelCtrl.clear();
+      _webhookCtrl.clear();
       for (final f in _fields) {
         f.dispose();
       }
@@ -326,6 +367,11 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
+                    tooltip: 'Pakai Ulang',
+                    icon: const Icon(Icons.copy_rounded, size: 19, color: AdminColors.sky),
+                    onPressed: () => _loadPreset(item),
+                  ),
+                  IconButton(
                     icon: Icon(
                       active ? Icons.pause_circle_outline_rounded : Icons.play_circle_outline_rounded,
                       color: active ? AdminColors.gold : AdminColors.emerald,
@@ -487,17 +533,40 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
           onChanged: (v) => setState(() => _sendFcm = v),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: AdminColors.emerald),
-            onPressed: _saving ? null : _sendBroadcast,
-            icon: const Icon(Icons.send_rounded),
-            label: Text(
-              _saving ? 'Mengirim...' : 'Kirim Broadcast Inbox',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
+        TextField(
+          controller: _webhookCtrl,
+          decoration: const InputDecoration(
+            labelText: 'URL API / Webhook Tujuan (opsional)',
+            hintText: 'https://... (terima POST JSON konfirmasi / survey)',
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(backgroundColor: AdminColors.emerald),
+                  onPressed: _saving ? null : () => _sendBroadcast(isTemplate: false),
+                  icon: const Icon(Icons.send_rounded),
+                  label: Text(
+                    _saving ? 'Mengirim...' : 'Kirim Broadcast',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : () => _sendBroadcast(isTemplate: true),
+                icon: const Icon(Icons.bookmark_add_rounded),
+                label: const Text('Template'),
+              ),
+            ),
+          ],
         ),
       ],
     );
