@@ -345,12 +345,58 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                         final ipBlocked = log['ip_blocked'] == true;
                         final formattedDate =
                             formatDateDdMmYyyy((log['created_at'] ?? '').toString());
-                        final subtitleParts = <String>[
-                          '${log['via']} • ${log['device']}',
-                          if (ip.isNotEmpty)
-                            'IP: $ip${ipBlocked ? ' [DIBLOKIR]' : ''}',
-                          formattedDate,
-                        ];
+                        final viaRaw = (log['via'] ?? '').toString().trim();
+                        final viaLow = viaRaw.toLowerCase();
+                        final devRaw = (log['device'] ?? '-').toString().trim();
+                        final devLow = devRaw.toLowerCase();
+
+                        // Parse label device & device ID badge
+                        String devLabel = devRaw;
+                        String devIdBadge = '';
+                        final idMatch = RegExp(r'\[([^\]]+)\]\s*$').firstMatch(devRaw);
+                        if (idMatch != null) {
+                          devIdBadge = idMatch.group(1) ?? '';
+                          devLabel = devRaw.substring(0, idMatch.start).trim();
+                        } else if (devLow.startsWith('bt_')) {
+                          devIdBadge = devRaw;
+                          devLabel = 'Android App';
+                        }
+
+                        // Via badge styling
+                        late final String viaLabel;
+                        late final IconData viaIcon;
+                        late final Color viaColor;
+                        if (viaLow == 'ms_oauth' || viaLow == 'ms_oauth_app') {
+                          viaLabel = viaLow == 'ms_oauth_app' ? 'MS App' : 'Microsoft';
+                          viaIcon = Icons.window_rounded;
+                          viaColor = AdminColors.sky;
+                        } else if (viaLow.contains('android')) {
+                          viaLabel = 'Android App';
+                          viaIcon = Icons.android_rounded;
+                          viaColor = AdminColors.emerald;
+                        } else if (viaLow == 'web') {
+                          viaLabel = 'Web';
+                          viaIcon = Icons.language_rounded;
+                          viaColor = AdminColors.indigo;
+                        } else {
+                          viaLabel = viaRaw.isEmpty ? 'Manual' : viaRaw;
+                          viaIcon = Icons.login_rounded;
+                          viaColor = AdminColors.gold;
+                        }
+
+                        // Device icon
+                        late final IconData devIcon;
+                        if (viaLow.contains('android') || devLow.startsWith('bt_')) {
+                          devIcon = Icons.android_rounded;
+                        } else if (devLow.contains('tablet') || devLow.contains('ipad')) {
+                          devIcon = Icons.tablet_mac_rounded;
+                        } else if (devLow.contains('mobile') ||
+                            devLow.contains('android') ||
+                            devLow.contains('iphone')) {
+                          devIcon = Icons.smartphone_rounded;
+                        } else {
+                          devIcon = Icons.computer_rounded;
+                        }
 
                         final rawNoreg = (log['noreg'] ?? '').toString().replaceAll(RegExp(r'\D+'), '');
                         final noreg8 = rawNoreg.isNotEmpty ? rawNoreg.padLeft(8, '0') : '';
@@ -361,78 +407,209 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                         final initial = namaStr.isNotEmpty ? namaStr[0].toUpperCase() : 'A';
 
                         return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: Stack(
-                              clipBehavior: Clip.none,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: AdminColors.surface,
-                                  child: ClipOval(
-                                    child: avatarUrl.isNotEmpty
-                                        ? Image.network(
-                                            avatarUrl,
-                                            width: 44,
-                                            height: 44,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Text(
-                                              initial,
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 22,
+                                      backgroundColor: AdminColors.surface,
+                                      child: ClipOval(
+                                        child: avatarUrl.isNotEmpty
+                                            ? Image.network(
+                                                avatarUrl,
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => Text(
+                                                  initial,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                    color: AdminColors.textPrimary,
+                                                  ),
+                                                ),
+                                              )
+                                            : Text(
+                                                initial,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AdminColors.textPrimary,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: -2,
+                                      bottom: -2,
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          color: AdminColors.card,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          ok
+                                              ? Icons.check_circle_rounded
+                                              : Icons.cancel_rounded,
+                                          size: 15,
+                                          color: ok
+                                              ? AdminColors.emerald
+                                              : AdminColors.danger,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '$namaStr (${log['noreg']})',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                fontWeight: FontWeight.w800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13.5,
                                                 color: AdminColors.textPrimary,
                                               ),
                                             ),
-                                          )
-                                        : Text(
-                                            initial,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              color: AdminColors.textPrimary,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 5,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 7,
+                                              vertical: 2.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: viaColor.withValues(alpha: 0.16),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: viaColor.withValues(alpha: 0.45),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(viaIcon, size: 12, color: viaColor),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  viaLabel,
+                                                  style: TextStyle(
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: viaColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
+                                          if (devIdBadge.isNotEmpty)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2.5,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AdminColors.surface,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: AdminColors.border,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                devIdBadge,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontFamily: 'monospace',
+                                                  color: AdminColors.textSecondary,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            devIcon,
+                                            size: 13,
+                                            color: AdminColors.textSecondary,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Expanded(
+                                            child: Text(
+                                              devLabel.isEmpty ? '-' : devLabel,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                color: AdminColors.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (ip.isNotEmpty) ...[
+                                            Icon(
+                                              Icons.lan_rounded,
+                                              size: 12,
+                                              color: ipBlocked
+                                                  ? AdminColors.danger
+                                                  : AdminColors.textSecondary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '$ip${ipBlocked ? ' [DIBLOKIR]' : ''}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontFamily: 'monospace',
+                                                fontWeight: ipBlocked
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                                color: ipBlocked
+                                                    ? AdminColors.danger
+                                                    : AdminColors.textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              formattedDate,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AdminColors.textSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Positioned(
-                                  right: -2,
-                                  bottom: -2,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: AdminColors.card,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      ok
-                                          ? Icons.check_circle_rounded
-                                          : Icons.cancel_rounded,
-                                      size: 15,
-                                      color: ok
-                                          ? AdminColors.emerald
-                                          : AdminColors.danger,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            title: Text(
-                              '${log['nama']} (${log['noreg']})',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 13.5),
-                            ),
-                            subtitle: Text(
-                              subtitleParts.join('\n'),
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: ipBlocked
-                                    ? AdminColors.danger
-                                    : AdminColors.textSecondary,
-                                height: 1.35,
-                              ),
-                            ),
-                            isThreeLine: true,
-                            trailing: ip.isEmpty
-                                ? null
-                                : IconButton(
+                                if (ip.isNotEmpty)
+                                  IconButton(
                                     tooltip: ipBlocked
                                         ? 'Buka Blokir IP $ip'
                                         : 'Blokir IP $ip',
@@ -450,6 +627,8 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                                             ? _confirmUnblockIp(ip)
                                             : _confirmBlockIp(ip),
                                   ),
+                              ],
+                            ),
                           ),
                         );
                       },
