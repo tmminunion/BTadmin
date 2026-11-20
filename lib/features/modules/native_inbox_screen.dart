@@ -35,7 +35,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
 
   String _category = 'pengumuman';
   String _targetGroup = 'all';
-  bool _sendFcm = true;
+  bool _sendFcm = false;
   final List<_FormFieldDraft> _fields = [];
 
   @override
