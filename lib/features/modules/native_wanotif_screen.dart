@@ -1151,7 +1151,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                             'Total aktif: $_subTotal subscriber',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AdminColors.muted,
+                              color: AdminColors.textSecondary,
                             ),
                           ),
                         ],
@@ -1245,7 +1245,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
               ),
               child: const Text(
                 'Tidak ada subscriber yang cocok.',
-                style: TextStyle(color: AdminColors.muted),
+                style: TextStyle(color: AdminColors.textSecondary),
               ),
             )
           else
@@ -1330,7 +1330,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                               'Terdaftar: $created',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: AdminColors.muted,
+                                color: AdminColors.textSecondary,
                               ),
                             ),
                           ],

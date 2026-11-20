@@ -32,7 +32,8 @@ jobs:
         run: |
           VER_RAW=$(grep '^version:' pubspec.yaml | awk '{print $2}')
           VER_NAME=${VER_RAW%%+*}
-          VER_CODE=${VER_RAW##*+}
+          BASE_CODE=${VER_RAW##*+}
+          VER_CODE=$((BASE_CODE + GITHUB_RUN_NUMBER))
           echo "version_name=${VER_NAME}" >> "$GITHUB_OUTPUT"
           echo "version_code=${VER_CODE}" >> "$GITHUB_OUTPUT"
 
@@ -128,7 +129,7 @@ jobs:
 
       - name: Build Signed Release APK
         run: |
-          flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols
+          flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols --build-name=${{ steps.meta.outputs.version_name }} --build-number=${{ steps.meta.outputs.version_code }}
           cp build/app/outputs/flutter-apk/app-release.apk "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
 
       - name: Upload APK to Google Drive (NUDB)
