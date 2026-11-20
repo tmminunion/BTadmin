@@ -1,7 +1,7 @@
 name: btadmin
 description: "BTadmin — Aplikasi Kontrol Admin Panel Bungtemin (PUK SP LEM SPSI PT. TMMIN)."
 publish_to: 'none'
-version: 1.3.1+7
+version: 1.3.2+8
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

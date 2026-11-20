@@ -40,25 +40,34 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
   final _fcmCustomCtrl = TextEditingController();
   final _fcmImageCtrl = TextEditingController();
 
+  // Subscriber WA controllers
+  final _subSearchCtrl = TextEditingController();
+  final _subNomorCtrl = TextEditingController();
+
   bool _loading = true;
   bool _sending = false;
   bool _uploadingImg = false;
   bool _balancing = false;
   bool _deduping = false;
+  bool _loadingSubs = false;
+  bool _unsubbing = false;
   String _statusFilter = '__active__';
   String _baileyFilter = '';
   Map<String, dynamic> _baileyStats = const {};
   List<Map<String, dynamic>> _items = const [];
+  int _subTotal = 0;
+  List<Map<String, dynamic>> _subscribers = const [];
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 2),
+      initialIndex: widget.initialTab.clamp(0, 3),
     );
     _load();
+    _loadSubscribers();
   }
 
   @override
@@ -72,6 +81,8 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     _fcmMsgCtrl.dispose();
     _fcmCustomCtrl.dispose();
     _fcmImageCtrl.dispose();
+    _subSearchCtrl.dispose();
+    _subNomorCtrl.dispose();
     super.dispose();
   }
 
@@ -396,6 +407,109 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     }
   }
 
+  Future<void> _loadSubscribers() async {
+    setState(() => _loadingSubs = true);
+    try {
+      final q = Uri.encodeQueryComponent(_subSearchCtrl.text.trim());
+      final data = await _api.getJson(
+        widget.token,
+        'wanotif_subscribers?q=$q',
+      );
+      if (!mounted) return;
+      setState(() {
+        _subTotal = int.tryParse('${data['total'] ?? 0}') ?? 0;
+        _subscribers = (data['items'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .toList() ??
+            [];
+        _loadingSubs = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loadingSubs = false);
+      _snack('$e', isError: true);
+    }
+  }
+
+  Future<void> _confirmQuickUnsub() async {
+    final raw = _subNomorCtrl.text.trim();
+    if (raw.isEmpty) {
+      _snack('Masukkan nomor WhatsApp terlebih dahulu.', isError: true);
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cabut Subscribe WA?'),
+        content: Text(
+          'Hapus nomor berikut dari daftar subscribe_news?\n\n$raw',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Cabut'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _unsubbing = true);
+    try {
+      final msg = await _api.postAction(
+        widget.token,
+        'wanotif_unsubscribe',
+        {'nomor': raw},
+      );
+      _subNomorCtrl.clear();
+      _snack(msg);
+      await _loadSubscribers();
+    } catch (e) {
+      _snack('$e', isError: true);
+    } finally {
+      if (mounted) setState(() => _unsubbing = false);
+    }
+  }
+
+  Future<void> _confirmUnsubById(int id, String label) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cabut Subscribe WA?'),
+        content: Text(
+          'Batalkan langganan berita WhatsApp untuk:\n\n$label',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cabut'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final msg = await _api.postAction(
+        widget.token,
+        'wanotif_unsubscribe',
+        {'id': id},
+      );
+      _snack(msg);
+      await _loadSubscribers();
+    } catch (e) {
+      _snack('$e', isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -404,17 +518,26 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
         title: const Text('Wanotif & Push FCM'),
         bottom: TabBar(
           controller: _tab,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: AdminColors.gold,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
           tabs: const [
             Tab(text: 'Antrean WA'),
             Tab(text: 'Broadcast WA'),
             Tab(text: 'Push FCM'),
+            Tab(text: 'Subscriber WA'),
           ],
         ),
         actions: [
           IconButton(
-            onPressed: _load,
+            onPressed: () {
+              if (_tab.index == 3) {
+                _loadSubscribers();
+              } else {
+                _load();
+              }
+            },
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -425,6 +548,7 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
           _buildQueueTab(),
           _buildWaBroadcastTab(),
           _buildFcmBroadcastTab(),
+          _buildSubscribersTab(),
         ],
       ),
     );
@@ -975,6 +1099,274 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSubscribersTab() {
+    return RefreshIndicator(
+      onRefresh: _loadSubscribers,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Card Cabut Cepat by No WA
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AdminColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AdminColors.danger.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AdminColors.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.unsubscribe_rounded,
+                        color: AdminColors.danger,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Cabut Subscribe via No. WA',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            'Total aktif: $_subTotal subscriber',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AdminColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _subNomorCtrl,
+                  maxLines: 2,
+                  keyboardType: TextInputType.multiline,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor WhatsApp (bisa lebih dari 1, pisah koma/enter)',
+                    hintText: 'Contoh: 08118127736 atau 628118127736',
+                    prefixIcon: Icon(Icons.phone_android_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AdminColors.danger,
+                    ),
+                    onPressed: _unsubbing ? null : _confirmQuickUnsub,
+                    icon: const Icon(Icons.person_remove_rounded, size: 18),
+                    label: Text(
+                      _unsubbing ? 'Memproses...' : 'Cabut Subscribe Nomor Ini',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Search Bar Subscriber
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _subSearchCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Cari No WA / Nama / Noreg...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    isDense: true,
+                    suffixIcon: _subSearchCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _subSearchCtrl.clear();
+                              _loadSubscribers();
+                            },
+                          )
+                        : null,
+                  ),
+                  onSubmitted: (_) => _loadSubscribers(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _loadSubscribers,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                ),
+                child: const Text('Cari'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (_loadingSubs)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_subscribers.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AdminColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AdminColors.border),
+              ),
+              child: const Text(
+                'Tidak ada subscriber yang cocok.',
+                style: TextStyle(color: AdminColors.muted),
+              ),
+            )
+          else
+            ..._subscribers.map((s) {
+              final id = int.tryParse('${s['id'] ?? 0}') ?? 0;
+              final nama = (s['nama'] ?? '-').toString();
+              final noreg = (s['noreg'] ?? '-').toString();
+              final nomor = (s['nomor'] ?? '-').toString();
+              final created = (s['created_at'] ?? '').toString();
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AdminColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AdminColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nama,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AdminColors.emerald
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  nomor,
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AdminColors.emerald,
+                                  ),
+                                ),
+                              ),
+                              if (noreg.isNotEmpty && noreg != '-')
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AdminColors.sky
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    noreg,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AdminColors.sky,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (created.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Terdaftar: $created',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AdminColors.muted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AdminColors.danger,
+                        side: BorderSide(
+                          color: AdminColors.danger.withValues(alpha: 0.5),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                      ),
+                      onPressed: id > 0
+                          ? () => _confirmUnsubById(id, '$nama ($nomor)')
+                          : null,
+                      icon: const Icon(Icons.close_rounded, size: 16),
+                      label: const Text(
+                        'Cabut',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 }
