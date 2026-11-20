@@ -31,6 +31,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   bool _isError = false;
 
   @override
+  void initState() {
+    super.initState();
+    _checkWaOtpStatus();
+  }
+
+  @override
   void dispose() {
     _noregCtrl.dispose();
     _secretCtrl.dispose();
@@ -60,6 +66,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _checkWaOtpStatus() async {
+    final st = await _api.fetchWaOtpStatus();
+    if (!mounted || st.waOnline) return;
+    setState(() {
+      _isError = true;
+      _statusMsg = st.message.isNotEmpty
+          ? st.message
+          : 'Bot WhatsApp OTP sedang offline. OTP dialihkan ke Email (jika terdaftar) atau login pakai Kata Sandi / PIN.';
+    });
   }
 
   Future<void> _requestOtp() async {
