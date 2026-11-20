@@ -163,6 +163,14 @@ class AdminModuleItem {
       path: '/adminpanel/wanotif',
     ),
     AdminModuleItem(
+      key: 'inbox',
+      category: 'WA & Broadcast',
+      title: 'Broadcast Inbox App',
+      desc: 'Kirim pengumuman, PDF, link, konfirmasi & multi-form',
+      iconName: 'inbox',
+      path: '/adminpanel/inbox',
+    ),
+    AdminModuleItem(
       key: 'email',
       category: 'WA & Broadcast',
       title: 'Email SMTP Tester',

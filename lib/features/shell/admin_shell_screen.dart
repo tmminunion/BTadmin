@@ -13,6 +13,7 @@ import '../modules/native_logs_screen.dart';
 import '../modules/native_promo_screen.dart';
 import '../modules/native_users_screen.dart';
 import '../modules/native_extra_screens.dart';
+import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../webview/admin_webview_screen.dart';
 
@@ -217,6 +218,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         screen = NativeWanotifScreen(
           token: widget.session.token,
           initialTab: 2,
+        );
+      case 'inbox':
+        screen = NativeInboxScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
         );
       default:
         _openWebModule(mod);
