@@ -390,10 +390,50 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
           ),
         ],
         const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Isi Pesan / HTML Template',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                _bodyCtrl.text =
+                    '<div style="font-family:sans-serif;color:#1e293b;">'
+                    '<div style="background:linear-gradient(135deg,#0b3b8c,#0f766e);color:#fff;padding:16px;border-radius:12px;margin-bottom:12px;">'
+                    '<div style="font-size:11px;font-weight:bold;">PUK SP LEM SPSI PT. TMMIN</div>'
+                    '<h2 style="margin:6px 0 0;font-size:17px;color:#fff;">Informasi Resmi Pengurus</h2></div>'
+                    '<p>Dear Rekan-rekan Anggota TMMIN,</p>'
+                    '<p>Berikut kami sampaikan informasi terbaru:</p>'
+                    '<ul><li>Poin pertama</li><li>Poin kedua</li></ul>'
+                    '</div>';
+              },
+              child: const Text('Template Newsletter', style: TextStyle(fontSize: 11.5)),
+            ),
+            TextButton(
+              onPressed: () {
+                _bodyCtrl.text =
+                    '<div style="font-family:sans-serif;color:#1e293b;">'
+                    '<div style="background:#0f172a;color:#fff;padding:16px;border-radius:12px;margin-bottom:12px;">'
+                    '<span style="background:#10b981;color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:bold;">UNDANGAN RESMI</span>'
+                    '<h2 style="margin:8px 0 0;font-size:17px;color:#fff;">Agenda Pertemuan / Koordinasi</h2></div>'
+                    '<p>Yth. Rekan-rekan Anggota,</p>'
+                    '<p><b>Hari/Tgl:</b> ...<br><b>Waktu:</b> ... WIB<br><b>Tempat:</b> ...</p>'
+                    '<p>Mohon kesediaannya menekan tombol konfirmasi di bawah.</p>'
+                    '</div>';
+              },
+              child: const Text('Template Undangan', style: TextStyle(fontSize: 11.5)),
+            ),
+          ],
+        ),
         TextField(
           controller: _bodyCtrl,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: 'Isi Pengumuman / Deskripsi'),
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: 'Bisa teks biasa atau HTML lengkap...',
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
