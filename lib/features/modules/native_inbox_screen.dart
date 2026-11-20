@@ -376,6 +376,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
             DropdownMenuItem(value: 'kp', child: Text('KP')),
             DropdownMenuItem(value: 'pleno', child: Text('Pleno')),
             DropdownMenuItem(value: 'pengurus', child: Text('Semua Pengurus')),
+            DropdownMenuItem(value: 'member', child: Text('Member (Non-Pengurus)')),
             DropdownMenuItem(value: 'custom', child: Text('Custom Noreg')),
           ],
           onChanged: (v) => setState(() => _targetGroup = v ?? 'all'),
