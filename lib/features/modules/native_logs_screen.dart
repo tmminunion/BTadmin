@@ -26,6 +26,7 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
   List<Map<String, dynamic>> _items = const [];
   List<Map<String, dynamic>> _blockedIps = const [];
   String _clientIp = '';
+  Map<String, dynamic> _apiStats = const {};
 
   @override
   void initState() {
@@ -55,6 +56,8 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                 .toList() ??
             [];
         _clientIp = (data['client_ip'] ?? '').toString();
+        final st = data['login_api_stats'];
+        _apiStats = st is Map<String, dynamic> ? st : const {};
         _loading = false;
       });
     } catch (e) {
@@ -289,6 +292,61 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
     );
   }
 
+  Widget _buildLoginApiStatsCard() {
+    final todayLegacy = int.tryParse('${_apiStats['today_legacy'] ?? 0}') ?? 0;
+    final totalLegacy = int.tryParse('${_apiStats['total_legacy'] ?? 0}') ?? 0;
+    final todayNew = int.tryParse('${_apiStats['today_loginapk'] ?? 0}') ?? 0;
+    final totalNew = int.tryParse('${_apiStats['total_loginapk'] ?? 0}') ?? 0;
+    final todayRej = int.tryParse('${_apiStats['today_ditolak'] ?? 0}') ?? 0;
+    final totalRej = int.tryParse('${_apiStats['total_ditolak'] ?? 0}') ?? 0;
+
+    Widget statBox(String label, int today, int total, Color color) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$today hari ini',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                'Total: $total',
+                style: const TextStyle(fontSize: 10.5, color: AdminColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: [
+          statBox('Lama (/User/login)', todayLegacy, totalLegacy, AdminColors.gold),
+          const SizedBox(width: 6),
+          statBox('Baru (/loginapk)', todayNew, totalNew, AdminColors.emerald),
+          const SizedBox(width: 6),
+          statBox('Ditolak', todayRej, totalRej, AdminColors.danger),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -314,6 +372,7 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
       ),
       body: Column(
         children: [
+          _buildLoginApiStatsCard(),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(

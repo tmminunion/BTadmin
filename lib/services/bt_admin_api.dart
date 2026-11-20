@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/admin_session.dart';
+import '../core/app_login_proof.dart';
 import '../models/admin_models.dart';
 
 class BtAdminApiException implements Exception {
@@ -76,10 +77,17 @@ class BtAdminApi {
       throw BtAdminApiException('Noreg wajib diisi.');
     }
     final uid = await _getOrCreateUid();
+    final proof = AppLoginProof.buildHeader(noreg: cleanNoreg, uid: uid);
+    final loginUrl = proof != null
+        ? '$baseUrl/btapi/loginapk'
+        : '$baseUrl/btapi/User/login/';
     final res = await http
         .post(
-          Uri.parse('$baseUrl/btapi/User/login/'),
-          headers: const {'Content-Type': 'application/json'},
+          Uri.parse(loginUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            if (proof != null) 'api-key': proof,
+          },
           body: jsonEncode({
             'id': cleanNoreg,
             'noreg': cleanNoreg,

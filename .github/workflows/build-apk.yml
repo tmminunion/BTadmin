@@ -128,8 +128,10 @@ jobs:
           flutter test
 
       - name: Build Signed Release APK
+        env:
+          APP_LOGIN_SECRET: ${{ secrets.APP_LOGIN_SECRET }}
         run: |
-          flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols --build-name=${{ steps.meta.outputs.version_name }} --build-number=${{ steps.meta.outputs.version_code }}
+          flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols --build-name=${{ steps.meta.outputs.version_name }} --build-number=${{ steps.meta.outputs.version_code }} --dart-define=APP_LOGIN_SECRET="${APP_LOGIN_SECRET}"
           cp build/app/outputs/flutter-apk/app-release.apk "BTadmin-v${{ steps.meta.outputs.version_name }}-code${{ steps.meta.outputs.version_code }}-release.apk"
 
       - name: Upload APK to Google Drive (NUDB)
