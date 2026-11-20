@@ -2,8 +2,8 @@ import 'package:btadmin/models/admin_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Katalog default memuat seluruh 27 modul adminpanel', () {
-    expect(AdminModuleItem.defaults.length, 27);
+  test('Katalog default memuat seluruh 28 modul adminpanel', () {
+    expect(AdminModuleItem.defaults.length, 28);
     final paths = AdminModuleItem.defaults.map((m) => m.path).toSet();
     expect(paths.contains('/adminpanel/home'), isTrue);
     expect(paths.contains('/adminpanel/control'), isTrue);
@@ -11,6 +11,7 @@ void main() {
     expect(paths.contains('/adminpanel/wanotif/antrean'), isTrue);
     expect(paths.contains('/adminpanel/users'), isTrue);
     expect(paths.contains('/adminpanel/ssh'), isTrue);
+    expect(paths.contains('/adminpanel/inbox'), isTrue);
   });
 
   test('AdminDashboardData mem-parsing payload API dengan aman', () {
