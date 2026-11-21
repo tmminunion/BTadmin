@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/admin_theme.dart';
 import '../../services/bt_admin_api.dart';
@@ -474,6 +475,36 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
             ),
           ],
         ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                final txt = data?.text?.trim() ?? '';
+                if (txt.isEmpty) {
+                  _snack('Clipboard kosong.', isError: true);
+                  return;
+                }
+                setState(() => _bodyCtrl.text = txt);
+                _snack('Script HTML BEE / Mail Studio ditempel (${txt.length} karakter).');
+              },
+              icon: const Icon(Icons.content_paste_rounded, size: 15),
+              label: const Text('Paste HTML BEE / Studio', style: TextStyle(fontSize: 11.5)),
+            ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                if (_bodyCtrl.text.trim().isEmpty) return;
+                await Clipboard.setData(ClipboardData(text: _bodyCtrl.text));
+                _snack('Script HTML disalin ke clipboard.');
+              },
+              icon: const Icon(Icons.copy_rounded, size: 15),
+              label: const Text('Copy HTML', style: TextStyle(fontSize: 11.5)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
         TextField(
           controller: _bodyCtrl,
           maxLines: 5,

@@ -43,6 +43,10 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
   // Subscriber WA controllers
   final _subSearchCtrl = TextEditingController();
   final _subNomorCtrl = TextEditingController();
+  final _addSubNamaCtrl = TextEditingController();
+  final _addSubNoregCtrl = TextEditingController();
+  final _addSubNomorCtrl = TextEditingController();
+  bool _addingSub = false;
 
   bool _loading = true;
   bool _sending = false;
@@ -83,6 +87,9 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     _fcmImageCtrl.dispose();
     _subSearchCtrl.dispose();
     _subNomorCtrl.dispose();
+    _addSubNamaCtrl.dispose();
+    _addSubNoregCtrl.dispose();
+    _addSubNomorCtrl.dispose();
     super.dispose();
   }
 
@@ -1102,12 +1109,134 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     );
   }
 
+  Future<void> _addSubscriberByPhone() async {
+    final raw = _addSubNomorCtrl.text.trim();
+    if (raw.isEmpty) {
+      _snack('Masukkan nomor WhatsApp yang ingin didaftarkan.', isError: true);
+      return;
+    }
+    setState(() => _addingSub = true);
+    try {
+      final msg = await _api.postAction(
+        widget.token,
+        'wanotif_subscribe',
+        {
+          'nomor': raw,
+          'nama': _addSubNamaCtrl.text.trim(),
+          'noreg': _addSubNoregCtrl.text.trim(),
+        },
+      );
+      _addSubNomorCtrl.clear();
+      _addSubNamaCtrl.clear();
+      _addSubNoregCtrl.clear();
+      _snack(msg);
+      await _loadSubscribers();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    } finally {
+      if (mounted) setState(() => _addingSub = false);
+    }
+  }
+
   Widget _buildSubscribersTab() {
     return RefreshIndicator(
       onRefresh: _loadSubscribers,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Card Tambah Subscriber WA Baru
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AdminColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AdminColors.success.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AdminColors.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.person_add_alt_1_rounded,
+                        color: AdminColors.success,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tambah Subscriber WA',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                          ),
+                          Text(
+                            'Daftarkan 1 atau banyak nomor (pisah koma/baris)',
+                            style: TextStyle(fontSize: 11.5, color: AdminColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _addSubNamaCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama (opsional)',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _addSubNoregCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Noreg (opsional)',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _addSubNomorCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor WhatsApp *',
+                    hintText: '08118127736 atau 62812...',
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: AdminColors.success),
+                    onPressed: _addingSub ? null : _addSubscriberByPhone,
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                    label: Text(_addingSub ? 'Menyimpan...' : 'Tambah Subscriber'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           // Card Cabut Cepat by No WA
           Container(
             padding: const EdgeInsets.all(14),

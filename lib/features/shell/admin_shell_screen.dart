@@ -15,6 +15,7 @@ import '../modules/native_users_screen.dart';
 import '../modules/native_extra_screens.dart';
 import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
+import '../modules/native_webhook_screen.dart';
 import '../webview/admin_webview_screen.dart';
 
 class AdminShellScreen extends StatefulWidget {
@@ -58,6 +59,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     'kalender',
     'wanotif',
     'wanotif_antrean',
+    'webhook',
     'email',
     'survey',
   };
@@ -219,6 +221,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           token: widget.session.token,
           initialTab: 2,
         );
+      case 'webhook':
+        screen = NativeWebhookScreen(token: widget.session.token);
+        break;
       case 'inbox':
         screen = NativeInboxScreen(
           token: widget.session.token,
@@ -376,6 +381,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
       );
     }
+    if (!modules.any((m) => m.key == 'webhook')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'webhook',
+          category: 'WA & Broadcast',
+          title: 'Webhook & Auto-Table',
+          desc: 'Webhook hybrid, Auto-Table bunp2332_prisma & Logs',
+          path: '/adminpanel/webhook',
+          iconName: 'plug',
+        ),
+      );
+    }
 
     final grouped = <String, List<AdminModuleItem>>{};
     for (final m in modules) {
@@ -401,6 +418,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           return Icons.playlist_add_check_rounded;
         case 'wanotif_fcm':
           return Icons.notifications_active_rounded;
+        case 'webhook':
+          return Icons.hub_rounded;
         case 'feedback':
           return Icons.rate_review_rounded;
         case 'email':
