@@ -54,7 +54,7 @@ class AdminDeepLinkService {
     return false;
   }
 
-  /// Ekstrak key modul & sub-path dari https://bungtemin.net/btadmin/<module>/<rest>
+  /// Ekstrak key modul & sub-path dari `https://bungtemin.net/btadmin/module/rest`
   static ({String key, String path}) resolveTarget(Uri uri) {
     final segments = <String>[];
     if (uri.scheme.toLowerCase() == 'btadmin') {
