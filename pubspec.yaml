@@ -17,6 +17,7 @@ dependencies:
   url_launcher: ^6.3.1
   app_links: ^6.4.0
   webview_flutter: ^4.10.0
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

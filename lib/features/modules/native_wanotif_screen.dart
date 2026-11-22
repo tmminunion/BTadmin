@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -961,12 +962,20 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              url,
+            child: CachedNetworkImage(
+              imageUrl: url,
               height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              maxHeightDiskCache: 400,
+              fadeInDuration: const Duration(milliseconds: 200),
+              progressIndicatorBuilder: (_, __, progress) => SizedBox(
+                height: 120,
+                child: Center(
+                  child: CircularProgressIndicator(value: progress.progress, strokeWidth: 2),
+                ),
+              ),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
         ],

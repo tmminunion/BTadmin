@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/admin_theme.dart';
@@ -480,12 +481,23 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                                       backgroundColor: AdminColors.surface,
                                       child: ClipOval(
                                         child: avatarUrl.isNotEmpty
-                                            ? Image.network(
-                                                avatarUrl,
+                                            ? CachedNetworkImage(
+                                                imageUrl: avatarUrl,
                                                 width: 44,
                                                 height: 44,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Text(
+                                                memCacheWidth: 96,
+                                                memCacheHeight: 96,
+                                                maxHeightDiskCache: 150,
+                                                fadeInDuration: const Duration(milliseconds: 180),
+                                                placeholder: (_, __) => Text(
+                                                  initial,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                    color: AdminColors.textPrimary,
+                                                  ),
+                                                ),
+                                                errorWidget: (_, __, ___) => Text(
                                                   initial,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w800,
