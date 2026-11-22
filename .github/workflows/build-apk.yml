@@ -1,7 +1,14 @@
 name: Build BTadmin Android APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: build-btadmin-apk
+  cancel-in-progress: true
 
 permissions:
   contents: read
