@@ -38,7 +38,11 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
   final _tableCtrl = TextEditingController();
   final _urlCtrl = TextEditingController();
   final _secretCtrl = TextEditingController();
+  final _cronCtrl = TextEditingController();
   bool _isActive = true;
+  String _listJenis = 'hashtag';
+  String _logJenis = 'hashtag';
+  bool _logFailOnly = false;
 
   static const _events = <String>[
     'inbox.form',
@@ -48,14 +52,6 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
     'wanotif.broadcast',
     '*',
   ];
-
-  static const _actionLabels = <String, String>{
-    'mysql_table': 'MySQL Prisma Auto-Table',
-    'nudb_json': 'NUDB JSON Store',
-    'http': 'HTTP Forward',
-    'mysql_and_http': 'MySQL + HTTP',
-    'workflow': 'Visual Workflow (n8n)',
-  };
 
   @override
   void initState() {
@@ -72,6 +68,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
     _tableCtrl.dispose();
     _urlCtrl.dispose();
     _secretCtrl.dispose();
+    _cronCtrl.dispose();
     super.dispose();
   }
 
@@ -127,6 +124,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
       _tableCtrl.clear();
       _urlCtrl.clear();
       _secretCtrl.clear();
+      _cronCtrl.clear();
       _isActive = true;
     });
   }
@@ -144,6 +142,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
       _tableCtrl.text = (h['table_name'] ?? '').toString();
       _urlCtrl.text = (h['target_url'] ?? '').toString();
       _secretCtrl.text = (h['secret'] ?? '').toString();
+      _cronCtrl.text = (h['schedule_cron'] ?? '').toString();
       _isActive = (h['is_active'] == 1 || h['is_active'] == true);
     });
     _tab.animateTo(1);
@@ -167,6 +166,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
         'target_url': _urlCtrl.text.trim(),
         'method': _method,
         'secret': _secretCtrl.text.trim(),
+        'schedule_cron': _cronCtrl.text.trim(),
         'is_active': _isActive ? 1 : 0,
       });
       _snack(msg);
@@ -234,6 +234,46 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
     } catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
     }
+  }
+
+  Future<void> _deleteLog(int logId) async {
+    try {
+      final msg = await _api.postAction(widget.token, 'webhook_delete_log', {'log_id': logId});
+      _snack(msg);
+      _load();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  Future<void> _clearLogs(String mode) async {
+    try {
+      final msg = await _api.postAction(widget.token, 'webhook_clear_logs', {'mode': mode});
+      _snack(msg);
+      _load();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  String _hookJenis(Map<String, dynamic> h) {
+    final j = (h['jenis'] ?? '').toString();
+    if (j == 'hashtag' || j == 'event' || j == 'schedule') return j;
+    final dir = (h['direction'] ?? 'outgoing').toString();
+    final slug = (h['slug'] ?? '').toString();
+    if (dir == 'schedule') return 'schedule';
+    if (dir == 'incoming' && RegExp(r'^bailey[-_]', caseSensitive: false).hasMatch(slug)) return 'hashtag';
+    return 'event';
+  }
+
+  String _logJenisOf(Map<String, dynamic> lg) {
+    final j = (lg['jenis'] ?? '').toString();
+    if (j == 'hashtag' || j == 'event' || j == 'schedule') return j;
+    final dir = (lg['direction'] ?? 'outgoing').toString();
+    final ev = (lg['event_name'] ?? '').toString();
+    if (dir == 'schedule' || ev == 'schedule.cron') return 'schedule';
+    if (RegExp(r'^(?:hook\.)?bailey[-_]', caseSensitive: false).hasMatch(ev)) return 'hashtag';
+    return 'event';
   }
 
   Future<void> _openTableViewer(int id, String name) async {
@@ -463,61 +503,139 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
     );
   }
 
+  Widget _jenisPillBar({
+    required String selected,
+    required int cHash,
+    required int cEvent,
+    required int cSched,
+    required ValueChanged<String> onSelect,
+  }) {
+    Widget btn(String key, String label, int count, Color color) {
+      final active = selected == key;
+      return Expanded(
+        child: InkWell(
+          onTap: () => onSelect(key),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+            decoration: BoxDecoration(
+              color: active ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: active ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 3)] : null,
+            ),
+            child: Text(
+              '$label ($count)',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                color: active ? color : Colors.black54,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          btn('hashtag', '# Hashtag', cHash, AdminColors.success),
+          btn('event', 'Event', cEvent, AdminColors.primary),
+          btn('schedule', 'Jadwal', cSched, Colors.orange.shade800),
+        ],
+      ),
+    );
+  }
+
   Widget _buildListTab() {
+    final cHash = _hooks.where((h) => _hookJenis(h) == 'hashtag').length;
+    final cEvent = _hooks.where((h) => _hookJenis(h) == 'event').length;
+    final cSched = _hooks.where((h) => _hookJenis(h) == 'schedule').length;
+    final visible = _hooks.where((h) => _hookJenis(h) == _listJenis).toList();
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         children: [
           Row(
             children: [
               _miniStat('Total', '${_stats['total'] ?? _hooks.length}', AdminColors.primary),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _miniStat('Aktif', '${_stats['active'] ?? 0}', AdminColors.success),
-              const SizedBox(width: 8),
-              _miniStat('Sukses 24j', '${_stats['ok_24h'] ?? 0}', const Color(0xFF0891B2)),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              _miniStat('OK 24j', '${_stats['ok_24h'] ?? 0}', const Color(0xFF0891B2)),
+              const SizedBox(width: 6),
               _miniStat('Gagal 24j', '${_stats['fail_24h'] ?? 0}', AdminColors.danger),
             ],
           ),
-          const SizedBox(height: 12),
-          if (_hooks.isEmpty)
-            const Card(
+          const SizedBox(height: 10),
+          _jenisPillBar(
+            selected: _listJenis,
+            cHash: cHash,
+            cEvent: cEvent,
+            cSched: cSched,
+            onSelect: (v) => setState(() => _listJenis = v),
+          ),
+          const SizedBox(height: 10),
+          if (visible.isEmpty)
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 child: Text(
-                  'Belum ada webhook. Buka tab Tambah / Edit untuk membuat webhook MySQL Auto-Table (bunp2332_prisma) atau Incoming Hook.',
+                  'Belum ada webhook di kategori ${_listJenis.toUpperCase()}.',
                   textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: Colors.black54),
                 ),
               ),
             )
           else
-            ..._hooks.map((h) {
+            ...visible.map((h) {
               final id = int.tryParse('${h['id'] ?? 0}') ?? 0;
               final name = (h['name'] ?? '-').toString();
               final dir = (h['direction'] ?? 'outgoing').toString();
               final act = (h['action_type'] ?? 'http').toString();
               final active = h['is_active'] == 1 || h['is_active'] == true;
               final hasTable = act == 'mysql_table' || act == 'nudb_json' || act == 'mysql_and_http';
-              final tbl = (h['table_name'] ?? '').toString();
               final slug = (h['slug'] ?? '').toString();
+              final hashtag = (h['hashtag'] ?? '').toString();
+              final cron = (h['schedule_cron'] ?? '').toString();
               final incUrl = dir == 'incoming' ? '$_hookBase$slug' : '';
 
               return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                margin: const EdgeInsets.only(bottom: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
+                          if (hashtag.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AdminColors.success.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(hashtag, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w800, color: AdminColors.success)),
+                            ),
                           Expanded(
-                            child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                            child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: active ? AdminColors.success.withValues(alpha: 0.14) : Colors.grey.shade200,
                               borderRadius: BorderRadius.circular(999),
@@ -525,7 +643,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
                             child: Text(
                               active ? 'AKTIF' : 'OFF',
                               style: TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 color: active ? AdminColors.success : Colors.grey.shade700,
                               ),
@@ -534,79 +652,52 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
                         ],
                       ),
                       const SizedBox(height: 4),
+                      Text(
+                        dir == 'schedule'
+                            ? 'Cron WIB: ${cron.isEmpty ? '-' : cron}'
+                            : (dir == 'incoming' ? '/$slug' : 'Event: ${h['event_name'] ?? '-'}'),
+                        style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: Colors.black54),
+                      ),
+                      const SizedBox(height: 6),
                       Wrap(
-                        spacing: 6,
+                        spacing: 4,
                         runSpacing: 4,
                         children: [
-                          Chip(
-                            label: Text(dir.toUpperCase(), style: const TextStyle(fontSize: 10.5)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          ),
-                          Chip(
-                            label: Text(_actionLabels[act] ?? act, style: const TextStyle(fontSize: 10.5)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          ),
-                          if (dir == 'outgoing')
-                            Chip(
-                              label: Text('${h['event_name']}', style: const TextStyle(fontSize: 10.5, fontFamily: 'monospace')),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
+                          if (incUrl.isNotEmpty)
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: incUrl));
+                                _snack('URL disalin!');
+                              },
+                              icon: const Icon(Icons.copy, size: 14),
+                              label: const Text('Copy', style: TextStyle(fontSize: 11)),
                             ),
-                        ],
-                      ),
-                      if (hasTable)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            act == 'nudb_json' ? 'NUDB /store/$tbl' : 'bunp2332_prisma.wh_tbl_$tbl',
-                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AdminColors.success, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      if (incUrl.isNotEmpty)
-                        InkWell(
-                          onTap: () {
-                            Clipboard.setData(ClipboardData(text: incUrl));
-                            _snack('URL Incoming disalin!');
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Copy Incoming: $incUrl',
-                              style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: AdminColors.primary),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
                           if (hasTable)
                             OutlinedButton.icon(
                               onPressed: () => _openTableViewer(id, name),
-                              icon: const Icon(Icons.table_chart_rounded, size: 15),
-                              label: const Text('Lihat Tabel', style: TextStyle(fontSize: 11.5)),
+                              icon: const Icon(Icons.table_chart_rounded, size: 14),
+                              label: const Text('Tabel', style: TextStyle(fontSize: 11)),
                             ),
                           OutlinedButton.icon(
                             onPressed: () => _testWebhook(id),
-                            icon: const Icon(Icons.bolt_rounded, size: 15, color: AdminColors.success),
-                            label: const Text('Test', style: TextStyle(fontSize: 11.5)),
+                            icon: const Icon(Icons.bolt_rounded, size: 14, color: AdminColors.success),
+                            label: const Text('Test', style: TextStyle(fontSize: 11)),
                           ),
                           OutlinedButton.icon(
                             onPressed: () => _loadToForm(h),
-                            icon: const Icon(Icons.edit_rounded, size: 15),
-                            label: const Text('Edit', style: TextStyle(fontSize: 11.5)),
+                            icon: const Icon(Icons.edit_rounded, size: 14),
+                            label: const Text('Edit', style: TextStyle(fontSize: 11)),
                           ),
                           IconButton(
+                            visualDensity: VisualDensity.compact,
                             onPressed: () => _toggleWebhook(id),
-                            icon: Icon(Icons.power_settings_new_rounded, color: active ? AdminColors.warning : AdminColors.success),
+                            icon: Icon(Icons.power_settings_new_rounded, size: 19, color: active ? AdminColors.warning : AdminColors.success),
                             tooltip: 'Toggle Aktif',
                           ),
                           IconButton(
+                            visualDensity: VisualDensity.compact,
                             onPressed: () => _deleteWebhook(id, name),
-                            icon: const Icon(Icons.delete_outline_rounded, color: AdminColors.danger),
+                            icon: const Icon(Icons.delete_outline_rounded, size: 19, color: AdminColors.danger),
                             tooltip: 'Hapus',
                           ),
                         ],
@@ -626,42 +717,44 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
     final needsHttp = _actionType == 'http' || _actionType == 'mysql_and_http';
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               _editId > 0 ? 'Edit Webhook #$_editId' : 'Tambah Webhook Baru',
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
             ),
             TextButton(onPressed: _resetForm, child: const Text('Reset')),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextField(
           controller: _nameCtrl,
-          decoration: const InputDecoration(labelText: 'Nama Webhook *', hintText: 'Misal: Survei Seragam 2026'),
+          decoration: const InputDecoration(labelText: 'Nama Webhook *', hintText: 'Misal: Survei Seragam 2026', isDense: true),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
           value: _direction,
-          decoration: const InputDecoration(labelText: 'Arah Webhook'),
+          decoration: const InputDecoration(labelText: 'Jenis / Arah Webhook', isDense: true),
           items: const [
-            DropdownMenuItem(value: 'outgoing', child: Text('Outgoing (Event Bungtemin)')),
-            DropdownMenuItem(value: 'incoming', child: Text('Incoming (Luar -> NUDB Hook)')),
+            DropdownMenuItem(value: 'outgoing', child: Text('Webhook Event (Outgoing Bungtemin)')),
+            DropdownMenuItem(value: 'incoming', child: Text('Incoming / Hashtag WA (bailey-*)')),
+            DropdownMenuItem(value: 'schedule', child: Text('Jadwal (Cronjob WIB)')),
           ],
           onChanged: (v) => setState(() => _direction = v ?? 'outgoing'),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
           value: _actionType,
-          decoration: const InputDecoration(labelText: 'Aksi / Tujuan Data'),
+          decoration: const InputDecoration(labelText: 'Aksi / Tujuan Data', isDense: true),
           items: const [
             DropdownMenuItem(value: 'mysql_table', child: Text('Simpan MySQL Auto-Table (bunp2332_prisma)')),
             DropdownMenuItem(value: 'nudb_json', child: Text('Simpan ke NUDB JSON Store')),
             DropdownMenuItem(value: 'http', child: Text('Kirim HTTP ke URL Eksternal')),
             DropdownMenuItem(value: 'mysql_and_http', child: Text('MySQL Auto-Table + Kirim HTTP')),
+            DropdownMenuItem(value: 'workflow', child: Text('Flow Studio Graph')),
           ],
           onChanged: (v) => setState(() => _actionType = v ?? 'mysql_table'),
         ),
@@ -669,17 +762,38 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
         if (_direction == 'outgoing')
           DropdownButtonFormField<String>(
             value: _eventName,
-            decoration: const InputDecoration(labelText: 'Event Pemicu'),
+            decoration: const InputDecoration(labelText: 'Event Pemicu', isDense: true),
             items: _events.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
             onChanged: (v) => setState(() => _eventName = v ?? 'inbox.form'),
           )
-        else
+        else if (_direction == 'schedule') ...[
+          TextField(
+            controller: _cronCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Jadwal Cron (5 kolom WIB)',
+              hintText: '0 8 * * *',
+              helperText: 'Menit wajib kelipatan 5 (mis. */15 * * * * atau 0 8 * * *)',
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            children: ['*/5 * * * *', '*/15 * * * *', '0 * * * *', '0 8 * * *']
+                .map((expr) => ActionChip(
+                      label: Text(expr, style: const TextStyle(fontSize: 11, fontFamily: 'monospace')),
+                      onPressed: () => setState(() => _cronCtrl.text = expr),
+                    ))
+                .toList(),
+          ),
+        ] else
           TextField(
             controller: _slugCtrl,
             decoration: InputDecoration(
-              labelText: 'Slug Incoming Hook',
+              labelText: 'Slug Incoming / Hashtag (mis. bailey-idcard)',
               prefixText: 'hook/',
-              helperText: 'URL penuh: $_hookBase<slug>',
+              helperText: 'URL: $_hookBase<slug>',
+              isDense: true,
             ),
           ),
         if (needsTable) ...[
@@ -687,9 +801,10 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
           TextField(
             controller: _tableCtrl,
             decoration: InputDecoration(
-              labelText: _actionType == 'nudb_json' ? 'Nama Koleksi NUDB' : 'Nama Tabel MySQL (bunp2332_prisma)',
+              labelText: _actionType == 'nudb_json' ? 'Nama Koleksi NUDB' : 'Nama Tabel MySQL',
               prefixText: _actionType == 'nudb_json' ? 'store/' : 'wh_tbl_',
               hintText: 'survei_2026',
+              isDense: true,
             ),
           ),
         ],
@@ -697,12 +812,12 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
           const SizedBox(height: 10),
           TextField(
             controller: _urlCtrl,
-            decoration: const InputDecoration(labelText: 'Target URL Eksternal *', hintText: 'https://...'),
+            decoration: const InputDecoration(labelText: 'Target URL Eksternal *', hintText: 'https://...', isDense: true),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _secretCtrl,
-            decoration: const InputDecoration(labelText: 'Secret HMAC-SHA256 (opsional)'),
+            decoration: const InputDecoration(labelText: 'Secret HMAC-SHA256 (opsional)', isDense: true),
           ),
         ],
         const SizedBox(height: 10),
@@ -712,7 +827,7 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
           value: _isActive,
           onChanged: (v) => setState(() => _isActive = v),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         FilledButton.icon(
           onPressed: _saving ? null : _saveWebhook,
           icon: const Icon(Icons.save_rounded),
@@ -723,48 +838,109 @@ class _NativeWebhookScreenState extends State<NativeWebhookScreen>
   }
 
   Widget _buildLogsTab() {
+    final cHash = _logs.where((l) => _logJenisOf(l) == 'hashtag').length;
+    final cEvent = _logs.where((l) => _logJenisOf(l) == 'event').length;
+    final cSched = _logs.where((l) => _logJenisOf(l) == 'schedule').length;
+    final visible = _logs.where((l) {
+      if (_logJenisOf(l) != _logJenis) return false;
+      if (_logFailOnly && (l['success'] == 1 || l['success'] == true)) return false;
+      return true;
+    }).toList();
+
     return RefreshIndicator(
       onRefresh: _load,
-      child: _logs.isEmpty
-          ? const Center(child: Text('Belum ada Delivery Log.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(14),
-              itemCount: _logs.length,
-              itemBuilder: (_, i) {
-                final lg = _logs[i];
-                final ok = lg['success'] == 1 || lg['success'] == true;
-                final logId = int.tryParse('${lg['id'] ?? 0}') ?? 0;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    onTap: () => _inspectLog(lg),
-                    leading: CircleAvatar(
-                      backgroundColor: (ok ? AdminColors.success : AdminColors.danger).withValues(alpha: 0.15),
-                      child: Icon(
-                        ok ? Icons.check_rounded : Icons.error_outline_rounded,
-                        color: ok ? AdminColors.success : AdminColors.danger,
-                        size: 18,
-                      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Column(
+              children: [
+                _jenisPillBar(
+                  selected: _logJenis,
+                  cHash: cHash,
+                  cEvent: cEvent,
+                  cSched: cSched,
+                  onSelect: (v) => setState(() => _logJenis = v),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('Gagal Saja', style: TextStyle(fontSize: 11.5)),
+                      selected: _logFailOnly,
+                      selectedColor: AdminColors.danger.withValues(alpha: 0.16),
+                      onSelected: (v) => setState(() => _logFailOnly = v),
                     ),
-                    title: Text(
-                      '${lg['event_name']} · HTTP ${lg['http_status']}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _clearLogs('failed'),
+                      icon: const Icon(Icons.cleaning_services_outlined, size: 15),
+                      label: const Text('Hapus Gagal', style: TextStyle(fontSize: 11.5)),
                     ),
-                    subtitle: Text(
-                      '${lg['provider']} · ${lg['duration_ms']} ms · ${lg['created_at']}',
-                      style: const TextStyle(fontSize: 11.5),
-                    ),
-                    trailing: lg['direction'] == 'outgoing'
-                        ? IconButton(
-                            onPressed: () => _retryLog(logId),
-                            icon: const Icon(Icons.refresh_rounded, size: 19),
-                            tooltip: 'Retry',
-                          )
-                        : null,
-                  ),
-                );
-              },
+                  ],
+                ),
+              ],
             ),
+          ),
+          Expanded(
+            child: visible.isEmpty
+                ? const Center(child: Text('Belum ada log pada filter ini.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    itemCount: visible.length,
+                    itemBuilder: (_, i) {
+                      final lg = visible[i];
+                      final ok = lg['success'] == 1 || lg['success'] == true;
+                      final logId = int.tryParse('${lg['id'] ?? 0}') ?? 0;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        child: ListTile(
+                          dense: true,
+                          onTap: () => _inspectLog(lg),
+                          leading: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: (ok ? AdminColors.success : AdminColors.danger).withValues(alpha: 0.15),
+                            child: Icon(
+                              ok ? Icons.check_rounded : Icons.error_outline_rounded,
+                              color: ok ? AdminColors.success : AdminColors.danger,
+                              size: 16,
+                            ),
+                          ),
+                          title: Text(
+                            '${lg['event_name']} · HTTP ${lg['http_status']}',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${lg['provider']} · ${lg['duration_ms']} ms · ${lg['created_at']}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (lg['direction'] == 'outgoing')
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () => _retryLog(logId),
+                                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                                  tooltip: 'Retry',
+                                ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => _deleteLog(logId),
+                                icon: const Icon(Icons.delete_outline, size: 18, color: AdminColors.danger),
+                                tooltip: 'Hapus',
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 

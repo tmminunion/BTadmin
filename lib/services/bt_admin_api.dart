@@ -369,7 +369,27 @@ class BtAdminApi {
         )
         .timeout(_timeout);
     final decoded = _decodeResponse(res, 'Gagal memuat data.');
-    return (decoded['data'] as Map<String, dynamic>?) ?? const {};
+    final inner = decoded['data'];
+    if (inner is Map<String, dynamic>) return inner;
+    return decoded;
+  }
+
+  Future<Map<String, dynamic>> postJson(
+    String token,
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/btapi/AdminApp/$endpoint'),
+          headers: _authHeaders(token),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 35));
+    final decoded = _decodeResponse(res, 'Aksi gagal.');
+    final inner = decoded['data'];
+    if (inner is Map<String, dynamic>) return inner;
+    return decoded;
   }
 
   Future<String> postAction(

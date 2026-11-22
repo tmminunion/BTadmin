@@ -1,0 +1,801 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/admin_theme.dart';
+import '../../services/bt_admin_api.dart';
+
+/// 1. Native CDN Manager
+class NativeCdnScreen extends StatefulWidget {
+  const NativeCdnScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeCdnScreen> createState() => _NativeCdnScreenState();
+}
+
+class _NativeCdnScreenState extends State<NativeCdnScreen> {
+  final _api = BtAdminApi();
+  bool _loading = true;
+  List<Map<String, dynamic>> _items = const [];
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final res = await _api.getJson(widget.token, 'cdn_list');
+      if (!mounted) return;
+      setState(() {
+        _items = (res['items'] as List?)
+                ?.whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList() ??
+            const [];
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? AdminColors.danger : AdminColors.success,
+      ),
+    );
+  }
+
+  Future<void> _showEditor([Map<String, dynamic>? item]) async {
+    final nameCtrl = TextEditingController(text: (item?['filename'] ?? '').toString());
+    final mimeCtrl = TextEditingController(text: (item?['mime_type'] ?? 'text/plain').toString());
+    final contentCtrl = TextEditingController();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(item == null ? 'Tambah File CDN' : 'Edit File CDN'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Nama File (mis. style.css)', isDense: true),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: mimeCtrl,
+                decoration: const InputDecoration(labelText: 'MIME Type', isDense: true),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: contentCtrl,
+                maxLines: 6,
+                decoration: const InputDecoration(labelText: 'Isi Konten', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    try {
+      final msg = await _api.postAction(widget.token, 'cdn_save', {
+        'id': item?['id'] ?? 0,
+        'filename': nameCtrl.text.trim(),
+        'mime_type': mimeCtrl.text.trim(),
+        'content': contentCtrl.text,
+      });
+      _snack(msg);
+      _load();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  Future<void> _deleteItem(int id, String filename) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus File CDN?'),
+        content: Text('Hapus "$filename"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final msg = await _api.postAction(widget.token, 'cdn_delete', {'id': id});
+      _snack(msg);
+      _load();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _items.where((it) {
+      if (_query.isEmpty) return true;
+      return (it['filename'] ?? '').toString().toLowerCase().contains(_query.toLowerCase());
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('CDN Manager'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showEditor(),
+        icon: const Icon(Icons.add),
+        label: const Text('File CDN'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search, size: 18),
+                hintText: 'Cari nama file CDN...',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) => setState(() => _query = v.trim()),
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : filtered.isEmpty
+                    ? const Center(child: Text('Belum ada file CDN.'))
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (_, i) {
+                            final it = filtered[i];
+                            final id = int.tryParse('${it['id'] ?? 0}') ?? 0;
+                            final fname = (it['filename'] ?? '-').toString();
+                            final url = (it['url'] ?? '').toString();
+                            final sizeKb = ((int.tryParse('${it['size'] ?? 0}') ?? 0) / 1024).toStringAsFixed(1);
+                            return Card(
+                              margin: EdgeInsets.zero,
+                              child: ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.public, color: AdminColors.primary),
+                                title: Text(fname, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${it['mime_type'] ?? '-'} • $sizeKb KB'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.copy, size: 18),
+                                      tooltip: 'Salin URL',
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(text: url));
+                                        _snack('URL disalin: $url');
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: AdminColors.danger),
+                                      onPressed: () => _deleteItem(id, fname),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 2. Native Backup Manager (Superadmin)
+class NativeBackupScreen extends StatefulWidget {
+  const NativeBackupScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeBackupScreen> createState() => _NativeBackupScreenState();
+}
+
+class _NativeBackupScreenState extends State<NativeBackupScreen> {
+  final _api = BtAdminApi();
+  bool _loading = true;
+  String _folder = '';
+  String _warning = '';
+  List<Map<String, dynamic>> _items = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final res = await _api.getJson(widget.token, 'backup_list');
+      if (!mounted) return;
+      setState(() {
+        _folder = (res['folder'] ?? '').toString();
+        _warning = (res['warning'] ?? '').toString();
+        _items = (res['items'] as List?)
+                ?.whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList() ??
+            const [];
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _warning = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Backup Manager'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  if (_folder.isNotEmpty)
+                    Card(
+                      child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.cloud_done, color: AdminColors.success),
+                        title: const Text('Folder SharePoint Aktif', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(_folder, style: const TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  if (_warning.isNotEmpty)
+                    Card(
+                      color: Colors.amber.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(_warning, style: TextStyle(color: Colors.amber.shade900, fontSize: 12)),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  if (_items.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: Text('Belum ada file backup bulan ini.')),
+                    )
+                  else
+                    ..._items.map((it) {
+                      final mb = ((int.tryParse('${it['size'] ?? 0}') ?? 0) / (1024 * 1024)).toStringAsFixed(2);
+                      final url = (it['web_url'] ?? '').toString();
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.storage, color: AdminColors.primary),
+                          title: Text((it['name'] ?? '-').toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          subtitle: Text('$mb MB • ${it['modified_at'] ?? '-'}', style: const TextStyle(fontSize: 11)),
+                          trailing: url.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.open_in_new, size: 18),
+                                  onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                                )
+                              : null,
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+/// 3. Native Core Settings (Superadmin)
+class NativeSettingsScreen extends StatefulWidget {
+  const NativeSettingsScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeSettingsScreen> createState() => _NativeSettingsScreenState();
+}
+
+class _NativeSettingsScreenState extends State<NativeSettingsScreen> {
+  final _api = BtAdminApi();
+  bool _loading = true;
+  Map<String, dynamic> _data = const {};
+  String _err = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = '';
+    });
+    try {
+      final res = await _api.getJson(widget.token, 'settings_get');
+      if (!mounted) return;
+      setState(() {
+        _data = res;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _err = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleSso() async {
+    final next = !(_data['sso_enabled'] == true);
+    try {
+      final msg = await _api.postAction(widget.token, 'toggle_sso', {'enabled': next ? 1 : 0});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AdminColors.danger),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Core Settings'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _err.isNotEmpty
+              ? Center(child: Padding(padding: const EdgeInsets.all(20), child: Text(_err)))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.all(12),
+                    children: [
+                      _infoTile('PHP Version', '${_data['php_version'] ?? '-'}', Icons.code),
+                      _infoTile('Waktu Server', '${_data['server_time'] ?? '-'}', Icons.schedule),
+                      _infoTile('Protokol Global', '${_data['global_mode'] ?? 'online'}'.toUpperCase(), Icons.shield),
+                      _infoTile('NUDB Engine', _data['nudb_online'] == true ? 'ONLINE' : 'OFFLINE', Icons.dns,
+                          ok: _data['nudb_online'] == true),
+                      _infoTile(
+                        'SSH Environment (.env)',
+                        _data['ssh_configured'] == true ? 'TERKONFIGURASI (${_data['ssh_host'] ?? '-'})' : 'BELUM DISET',
+                        Icons.terminal,
+                        ok: _data['ssh_configured'] == true,
+                      ),
+                      Card(
+                        child: SwitchListTile(
+                          secondary: const Icon(Icons.verified_user, color: AdminColors.primary),
+                          title: const Text('Login Microsoft SSO', style: TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(_data['sso_enabled'] == true ? 'Aktif untuk anggota' : 'Dinonaktifkan'),
+                          value: _data['sso_enabled'] == true,
+                          onChanged: (_) => _toggleSso(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _infoTile(String label, String val, IconData icon, {bool? ok}) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        dense: true,
+        leading: Icon(icon, color: ok == null ? AdminColors.primary : (ok ? AdminColors.success : AdminColors.danger)),
+        title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        subtitle: Text(val, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.black87)),
+      ),
+    );
+  }
+}
+
+/// 4. Native Microsoft Graph Admin
+class NativeMsAdminScreen extends StatefulWidget {
+  const NativeMsAdminScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeMsAdminScreen> createState() => _NativeMsAdminScreenState();
+}
+
+class _NativeMsAdminScreenState extends State<NativeMsAdminScreen> {
+  final _api = BtAdminApi();
+  bool _loading = true;
+  Map<String, dynamic> _data = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final res = await _api.getJson(widget.token, 'msadmin_status');
+      if (!mounted) return;
+      setState(() {
+        _data = res;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = _data['connected'] == true;
+    final oauthUrl = (_data['oauth_url'] ?? 'https://bungtemin.net/adminpanel/msadmin/oauth').toString();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Microsoft Graph Admin'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(14),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              connected ? Icons.check_circle : Icons.warning_amber_rounded,
+                              color: connected ? AdminColors.success : Colors.orange,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                connected ? 'SharePoint / Graph Terhubung' : 'Belum Terhubung ke Microsoft Graph',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Noreg: ${_data['noreg'] ?? '-'}'),
+                        Text('Nama: ${_data['nama'] ?? '-'}'),
+                        Text('Email: ${_data['email'] ?? '-'}'),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              if (widget.onOpenWeb != null) {
+                                widget.onOpenWeb!();
+                              } else {
+                                launchUrl(Uri.parse(oauthUrl), mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            icon: const Icon(Icons.login),
+                            label: Text(connected ? 'Perbarui Token OAuth Microsoft' : 'Hubungkan Microsoft OAuth'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// 5. Native Survey Builder
+class NativeSurveyBuilderScreen extends StatefulWidget {
+  const NativeSurveyBuilderScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeSurveyBuilderScreen> createState() => _NativeSurveyBuilderScreenState();
+}
+
+class _NativeSurveyBuilderScreenState extends State<NativeSurveyBuilderScreen> {
+  final _api = BtAdminApi();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _schemaCtrl = TextEditingController(
+    text: '[{"name":"pertanyaan_1","label":"Masukan Anda","type":"text","required":true}]',
+  );
+  String _status = 'active';
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _schemaCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_titleCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul survey wajib diisi.'), backgroundColor: AdminColors.danger),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final msg = await _api.postAction(widget.token, 'survey_save', {
+        'title': _titleCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'status': _status,
+        'schema_json': _schemaCtrl.text.trim(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AdminColors.success));
+      _titleCtrl.clear();
+      _descCtrl.clear();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AdminColors.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Survey Builder'),
+        actions: [
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          TextField(
+            controller: _titleCtrl,
+            decoration: const InputDecoration(labelText: 'Judul Survey *', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _descCtrl,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'Deskripsi Singkat', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            value: _status,
+            decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+            items: const [
+              DropdownMenuItem(value: 'active', child: Text('Aktif')),
+              DropdownMenuItem(value: 'draft', child: Text('Draft')),
+              DropdownMenuItem(value: 'closed', child: Text('Ditutup')),
+            ],
+            onChanged: (v) => setState(() => _status = v ?? 'active'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _schemaCtrl,
+            maxLines: 8,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Schema Pertanyaan (JSON)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: _saving
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.save),
+            label: const Text('Simpan Survey'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 6. Native SSH Terminal (Superadmin Only)
+class NativeSshScreen extends StatefulWidget {
+  const NativeSshScreen({super.key, required this.token, this.onOpenWeb});
+  final String token;
+  final VoidCallback? onOpenWeb;
+
+  @override
+  State<NativeSshScreen> createState() => _NativeSshScreenState();
+}
+
+class _NativeSshScreenState extends State<NativeSshScreen> {
+  final _api = BtAdminApi();
+  final _cmdCtrl = TextEditingController();
+  bool _running = false;
+  final List<String> _history = [];
+
+  @override
+  void dispose() {
+    _cmdCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exec([String? preset]) async {
+    final cmd = (preset ?? _cmdCtrl.text).trim();
+    if (cmd.isEmpty || _running) return;
+    setState(() {
+      _running = true;
+      _history.add('\$ $cmd');
+    });
+    if (preset == null) _cmdCtrl.clear();
+    try {
+      final res = await _api.postJson(widget.token, 'ssh_exec', {'command': cmd});
+      if (!mounted) return;
+      setState(() {
+        _history.add((res['output'] ?? '(empty)').toString());
+        _running = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _history.add('ERROR: ${e.toString().replaceFirst('Exception: ', '')}');
+        _running = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('SSH Terminal (Superadmin)'),
+        actions: [
+          IconButton(icon: const Icon(Icons.delete_sweep), onPressed: () => setState(_history.clear)),
+          if (widget.onOpenWeb != null)
+            IconButton(icon: const Icon(Icons.open_in_browser), onPressed: widget.onOpenWeb),
+        ],
+      ),
+      body: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: ['uptime', 'df -h', 'free -m', 'pm2 list']
+                  .map((c) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ActionChip(label: Text(c, style: const TextStyle(fontSize: 12)), onPressed: () => _exec(c)),
+                      ))
+                  .toList(),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              color: const Color(0xFF0F172A),
+              padding: const EdgeInsets.all(12),
+              child: ListView.builder(
+                itemCount: _history.length,
+                itemBuilder: (_, i) => SelectableText(
+                  _history[i],
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: _history[i].startsWith(r'$ ') ? Colors.greenAccent : Colors.white70,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _cmdCtrl,
+                      onSubmitted: (_) => _exec(),
+                      decoration: const InputDecoration(
+                        hintText: 'Ketik perintah SSH...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _running ? null : () => _exec(),
+                    child: _running
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.send, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

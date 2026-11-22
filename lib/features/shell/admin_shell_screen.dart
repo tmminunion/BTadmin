@@ -19,6 +19,7 @@ import '../modules/native_extra_screens.dart';
 import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../modules/native_webhook_screen.dart';
+import '../modules/native_system_screens.dart';
 import '../webview/admin_webview_screen.dart';
 
 class AdminShellScreen extends StatefulWidget {
@@ -252,6 +253,37 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         break;
       case 'inbox':
         screen = NativeInboxScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'cdn':
+      case 'cdn_setup':
+        screen = NativeCdnScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'backup':
+        screen = NativeBackupScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'setting':
+        screen = NativeSettingsScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'msadmin':
+        screen = NativeMsAdminScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'survey_builder':
+        screen = NativeSurveyBuilderScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'ssh':
+        screen = NativeSshScreen(
           token: widget.session.token,
           onOpenWeb: () => _openWebModule(mod),
         );
