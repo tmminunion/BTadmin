@@ -181,6 +181,46 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
     }
   }
 
+  Future<void> _confirmAssignAll(int target) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pindahkan Semua ke Bailey $target'),
+        content: Text(
+          'Pindahkan SEMUA antrean aktif Wanotif ke Bailey $target?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  target == 1 ? AdminColors.sky : AdminColors.emerald,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('All ke Bailey $target'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _balancing = true);
+    try {
+      final msg = await _api.postAction(widget.token, 'wanotif_action', {
+        'action': 'assign_all',
+        'bailey': target,
+      });
+      _snack(msg);
+      await _load();
+    } catch (e) {
+      _snack('$e', isError: true);
+    } finally {
+      if (mounted) setState(() => _balancing = false);
+    }
+  }
+
   Future<void> _confirmDedup(int dupCount) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -722,6 +762,56 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                   ),
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 36,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AdminColors.sky,
+                      side: const BorderSide(color: AdminColors.sky),
+                    ),
+                    onPressed: (_balancing || _loading)
+                        ? null
+                        : () => _confirmAssignAll(1),
+                    icon: const Icon(Icons.looks_one_rounded, size: 16),
+                    label: const Text(
+                      'All ke Bailey 1',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 36,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AdminColors.emerald,
+                      side: const BorderSide(color: AdminColors.emerald),
+                    ),
+                    onPressed: (_balancing || _loading)
+                        ? null
+                        : () => _confirmAssignAll(2),
+                    icon: const Icon(Icons.looks_two_rounded, size: 16),
+                    label: const Text(
+                      'All ke Bailey 2',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ],
