@@ -50,6 +50,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          BTADMIN_GOOGLE_SERVICES_JSON_B64: ${{ secrets.BTADMIN_GOOGLE_SERVICES_JSON_B64 }}
         run: |
           rm -rf android /tmp/btadmin_tpl
           flutter create /tmp/btadmin_tpl --project-name btadmin --org com.bung --platforms=android
@@ -64,6 +65,8 @@ jobs:
           m = open(mpath, "r", encoding="utf-8").read()
           if "android.permission.INTERNET" not in m:
               m = m.replace("<application", '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+          if "android.permission.POST_NOTIFICATIONS" not in m:
+              m = m.replace("<application", '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application', 1)
           m = re.sub(r'android:label="[^"]*"', 'android:label="BTadmin"', m)
           if 'pathPrefix="/btadmin"' not in m:
               deep_link_filter = '''
@@ -127,9 +130,35 @@ jobs:
           """
               g = g.replace("buildTypes {", signing_block + "\n    buildTypes {", 1)
               g = g.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+
+          # 3. Firebase google-services plugin (if google-services.json secret present)
+          if os.environ.get("BTADMIN_GOOGLE_SERVICES_JSON_B64", "").strip():
+              spath = "android/settings.gradle.kts"
+              if os.path.exists(spath):
+                  st = open(spath, "r", encoding="utf-8").read()
+                  if "com.google.gms.google-services" not in st:
+                      st = st.replace(
+                          'id("com.android.application")',
+                          'id("com.google.gms.google-services") version "4.4.2" apply false\n    id("com.android.application")',
+                          1,
+                      )
+                      open(spath, "w", encoding="utf-8").write(st)
+              if gpath.endswith(".kts"):
+                  if "com.google.gms.google-services" not in g:
+                      g = g.replace(
+                          'id("com.android.application")',
+                          'id("com.android.application")\n    id("com.google.gms.google-services")',
+                          1,
+                      )
+              else:
+                  if "com.google.gms.google-services" not in g:
+                      g += "\napply plugin: 'com.google.gms.google-services'\n"
           open(gpath, "w", encoding="utf-8").write(g)
           PYEOF
 
+          if [ -n "${BTADMIN_GOOGLE_SERVICES_JSON_B64:-}" ]; then
+            echo "$BTADMIN_GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
+          fi
           echo "$KEYSTORE_BASE64" | base64 -d > android/app/btadmin-release.jks
           cat > android/key.properties <<EOF
           storePassword=${STORE_PASSWORD}

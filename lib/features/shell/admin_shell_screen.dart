@@ -6,6 +6,7 @@ import '../../core/admin_session.dart';
 import '../../core/admin_theme.dart';
 import '../../core/date_format.dart';
 import '../../models/admin_models.dart';
+import '../../services/admin_fcm_service.dart';
 import '../../services/bt_admin_api.dart';
 import '../../services/deep_link_service.dart';
 import '../modules/native_berita_screen.dart';
@@ -75,6 +76,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     _dash = widget.initialDashboard;
     _loading = _dash == null;
     _loadDashboard();
+    AdminFcmService.initAndRegister(authToken: widget.session.token, context: context);
     _deepLinkSub = AdminDeepLinkService.instance.onUri.listen(_handleDeepLinkUri);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final pending = AdminDeepLinkService.instance.consumePendingUri();

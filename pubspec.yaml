@@ -18,6 +18,8 @@ dependencies:
   app_links: ^6.4.0
   webview_flutter: ^4.10.0
   cached_network_image: ^3.4.1
+  firebase_core: ^5.2.0
+  firebase_messaging: ^17.1.0
 
 dev_dependencies:
   flutter_test:
