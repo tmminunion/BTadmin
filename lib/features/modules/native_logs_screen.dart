@@ -542,6 +542,27 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                                               ),
                                             ),
                                           ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: (ok ? AdminColors.emerald : AdminColors.danger)
+                                                  .withValues(alpha: 0.16),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: (ok ? AdminColors.emerald : AdminColors.danger)
+                                                    .withValues(alpha: 0.45),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              ok ? 'SUKSES' : 'GAGAL',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: ok ? AdminColors.emerald : AdminColors.danger,
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 6),

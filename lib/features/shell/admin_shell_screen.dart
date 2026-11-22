@@ -931,6 +931,26 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                 ),
               ),
               isThreeLine: true,
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (log.success ? AdminColors.emerald : AdminColors.danger)
+                      .withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: (log.success ? AdminColors.emerald : AdminColors.danger)
+                        .withValues(alpha: 0.45),
+                  ),
+                ),
+                child: Text(
+                  log.success ? 'SUKSES' : 'GAGAL',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: log.success ? AdminColors.emerald : AdminColors.danger,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
