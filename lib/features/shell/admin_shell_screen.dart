@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/admin_session.dart';
@@ -5,6 +7,7 @@ import '../../core/admin_theme.dart';
 import '../../core/date_format.dart';
 import '../../models/admin_models.dart';
 import '../../services/bt_admin_api.dart';
+import '../../services/deep_link_service.dart';
 import '../modules/native_berita_screen.dart';
 import '../modules/native_cerita_screen.dart';
 import '../modules/native_email_survey_screen.dart';
@@ -37,6 +40,7 @@ class AdminShellScreen extends StatefulWidget {
 class _AdminShellScreenState extends State<AdminShellScreen> {
   final _api = BtAdminApi();
   final _searchCtrl = TextEditingController();
+  StreamSubscription<Uri>? _deepLinkSub;
 
   int _tabIndex = 0;
   int _controlSubTab = 0;
@@ -70,10 +74,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     _dash = widget.initialDashboard;
     _loading = _dash == null;
     _loadDashboard();
+    _deepLinkSub = AdminDeepLinkService.instance.onUri.listen(_handleDeepLinkUri);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pending = AdminDeepLinkService.instance.consumePendingUri();
+      if (pending != null && mounted) {
+        _handleDeepLinkUri(pending);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _deepLinkSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -137,6 +149,20 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
       ),
     );
+  }
+
+  void _handleDeepLinkUri(Uri uri) {
+    if (!mounted) return;
+    final target = AdminDeepLinkService.resolveTarget(uri);
+    final mod = AdminModuleItem(
+      key: target.key,
+      category: 'Deep Link',
+      title: target.key.toUpperCase(),
+      desc: '',
+      iconName: 'dashboard',
+      path: target.path,
+    );
+    _openModule(mod);
   }
 
   void _openModule(AdminModuleItem mod) {

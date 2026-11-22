@@ -5,9 +5,11 @@ import 'core/admin_theme.dart';
 import 'features/auth/admin_login_screen.dart';
 import 'features/shell/admin_shell_screen.dart';
 import 'models/admin_models.dart';
+import 'services/deep_link_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  AdminDeepLinkService.instance.init();
   runApp(const BtAdminApp());
 }
 

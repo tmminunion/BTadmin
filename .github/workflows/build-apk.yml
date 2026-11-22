@@ -58,6 +58,21 @@ jobs:
           if "android.permission.INTERNET" not in m:
               m = m.replace("<application", '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
           m = re.sub(r'android:label="[^"]*"', 'android:label="BTadmin"', m)
+          if 'pathPrefix="/btadmin"' not in m:
+              deep_link_filter = '''
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="bungtemin.net" android:pathPrefix="/btadmin"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="btadmin"/>
+            </intent-filter>'''
+              m = m.replace("</activity>", deep_link_filter + "\n        </activity>", 1)
           open(mpath, "w", encoding="utf-8").write(m)
 
           # 2. build.gradle(.kts): minSdk 24 + release signingConfig
