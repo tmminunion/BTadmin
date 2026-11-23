@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/admin_theme.dart';
 import '../../services/bt_admin_api.dart';
+import 'native_cdn_editor_screen.dart';
 
 /// 1. Native CDN Manager
 class NativeCdnScreen extends StatefulWidget {
@@ -55,6 +56,22 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
         backgroundColor: isError ? AdminColors.danger : AdminColors.success,
       ),
     );
+  }
+
+  Future<void> _openCodeEditor([Map<String, dynamic>? item]) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => CdnCodeEditorScreen(
+          token: widget.token,
+          fileId: int.tryParse('${item?['id'] ?? 0}') ?? 0,
+          initialFilename: (item?['filename'] ?? '').toString(),
+          initialMimeType: (item?['mime_type'] ?? 'text/plain').toString(),
+        ),
+      ),
+    );
+    if (saved == true) {
+      _load();
+    }
   }
 
   Future<void> _showEditor([Map<String, dynamic>? item]) async {
@@ -154,7 +171,7 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showEditor(),
+        onPressed: () => _openCodeEditor(),
         icon: const Icon(Icons.add),
         label: const Text('File CDN'),
       ),
@@ -193,7 +210,8 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
                               margin: EdgeInsets.zero,
                               child: ListTile(
                                 dense: true,
-                                leading: const Icon(Icons.public, color: AdminColors.primary),
+                                onTap: () => _openCodeEditor(it),
+                                leading: const Icon(Icons.code_rounded, color: AdminColors.primary),
                                 title: Text(fname, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 subtitle: Text('${it['mime_type'] ?? '-'} • $sizeKb KB'),
                                 trailing: Row(
