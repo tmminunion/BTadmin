@@ -80,8 +80,7 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
       final afterId = initial ? 0 : _lastId;
       final res = await _api.getJson(
         widget.token,
-        'chatsim_state',
-        query: {'session_key': 'default', 'after_id': '$afterId'},
+        'chatsim_state?session_key=default&after_id=$afterId',
       );
       if (!mounted) return;
       final cfg = res['config'];
