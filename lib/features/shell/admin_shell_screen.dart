@@ -21,6 +21,7 @@ import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../modules/native_webhook_screen.dart';
 import '../modules/native_system_screens.dart';
+import '../modules/native_apitester_screen.dart';
 import '../webview/admin_webview_screen.dart';
 
 class AdminShellScreen extends StatefulWidget {
@@ -281,6 +282,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         );
       case 'survey_builder':
         screen = NativeSurveyBuilderScreen(
+          token: widget.session.token,
+          onOpenWeb: () => _openWebModule(mod),
+        );
+      case 'apitester':
+        screen = NativeApiTesterScreen(
           token: widget.session.token,
           onOpenWeb: () => _openWebModule(mod),
         );
