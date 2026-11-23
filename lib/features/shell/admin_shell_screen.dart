@@ -468,7 +468,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       modules.add(
         const AdminModuleItem(
           key: 'chatsim',
-          category: 'WA & Broadcast',
+          category: 'Development & Testing',
           title: 'Simulasi Chat & Copilot',
           desc: 'Simulasi chat & konektor Webhook Outgoing/Incoming Copilot Studio',
           path: '/adminpanel/chatsim',
