@@ -20,6 +20,7 @@ import '../modules/native_extra_screens.dart';
 import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../modules/native_webhook_screen.dart';
+import '../modules/native_chatsim_screen.dart';
 import '../modules/native_system_screens.dart';
 import '../modules/native_apitester_screen.dart';
 import '../webview/admin_webview_screen.dart';
@@ -67,6 +68,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     'wanotif',
     'wanotif_antrean',
     'webhook',
+    'chatsim',
     'email',
     'survey',
   };
@@ -253,6 +255,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         );
       case 'webhook':
         screen = NativeWebhookScreen(token: widget.session.token);
+        break;
+      case 'chatsim':
+        screen = NativeChatSimScreen(token: widget.session.token);
         break;
       case 'inbox':
         screen = NativeInboxScreen(
@@ -459,6 +464,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
       );
     }
+    if (!modules.any((m) => m.key == 'chatsim')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'chatsim',
+          category: 'WA & Broadcast',
+          title: 'Simulasi Chat & Copilot',
+          desc: 'Simulasi chat & konektor Webhook Outgoing/Incoming Copilot Studio',
+          path: '/adminpanel/chatsim',
+          iconName: 'robot',
+        ),
+      );
+    }
 
     final grouped = <String, List<AdminModuleItem>>{};
     for (final m in modules) {
@@ -486,6 +503,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           return Icons.notifications_active_rounded;
         case 'webhook':
           return Icons.hub_rounded;
+        case 'chatsim':
+          return Icons.smart_toy_rounded;
         case 'feedback':
           return Icons.rate_review_rounded;
         case 'email':
