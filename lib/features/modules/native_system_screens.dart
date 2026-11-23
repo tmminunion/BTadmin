@@ -74,60 +74,6 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
     }
   }
 
-  Future<void> _showEditor([Map<String, dynamic>? item]) async {
-    final nameCtrl = TextEditingController(text: (item?['filename'] ?? '').toString());
-    final mimeCtrl = TextEditingController(text: (item?['mime_type'] ?? 'text/plain').toString());
-    final contentCtrl = TextEditingController();
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(item == null ? 'Tambah File CDN' : 'Edit File CDN'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nama File (mis. style.css)', isDense: true),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: mimeCtrl,
-                decoration: const InputDecoration(labelText: 'MIME Type', isDense: true),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: contentCtrl,
-                maxLines: 6,
-                decoration: const InputDecoration(labelText: 'Isi Konten', border: OutlineInputBorder()),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-    if (saved != true) return;
-    try {
-      final msg = await _api.postAction(widget.token, 'cdn_save', {
-        'id': item?['id'] ?? 0,
-        'filename': nameCtrl.text.trim(),
-        'mime_type': mimeCtrl.text.trim(),
-        'content': contentCtrl.text,
-      });
-      _snack(msg);
-      _load();
-    } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
-    }
-  }
-
   Future<void> _deleteItem(int id, String filename) async {
     final ok = await showDialog<bool>(
       context: context,
