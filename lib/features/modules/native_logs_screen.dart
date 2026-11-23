@@ -567,7 +567,7 @@ class _NativeLogsScreenState extends State<NativeLogsScreen> {
                                               ),
                                             ),
                                             child: Text(
-                                              ok ? 'SUKSES' : 'GAGAL',
+                                              ok ? 'SUKSES' : ((log['fail_reason'] ?? '').toString().isNotEmpty ? 'GAGAL • ${log['fail_reason']}' : 'GAGAL'),
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.w800,
