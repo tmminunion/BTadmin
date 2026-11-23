@@ -148,12 +148,17 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
     if (preset == null) _msgCtrl.clear();
     setState(() => _sending = true);
     try {
-      await _api.postAction(widget.token, 'chatsim_send', {
-        'session_key': 'default',
-        'noreg': _noregCtrl.text.trim(),
-        'nama': _namaCtrl.text.trim(),
-        'message': text,
-      });
+      await _api.postAction(
+        widget.token,
+        'chatsim_send',
+        {
+          'session_key': 'default',
+          'noreg': _noregCtrl.text.trim(),
+          'nama': _namaCtrl.text.trim(),
+          'message': text,
+        },
+        timeout: const Duration(seconds: 180),
+      );
       await _loadState(initial: false);
     } catch (e) {
       _snack(e.toString(), isError: true);

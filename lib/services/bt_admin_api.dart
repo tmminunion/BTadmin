@@ -395,15 +395,16 @@ class BtAdminApi {
   Future<String> postAction(
     String token,
     String endpoint,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 35),
+  }) async {
     final res = await http
         .post(
           Uri.parse('$baseUrl/btapi/AdminApp/$endpoint'),
           headers: _authHeaders(token),
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 35));
+        .timeout(timeout);
     final decoded = _decodeResponse(res, 'Aksi gagal.');
     return (decoded['message'] ?? 'Berhasil.').toString();
   }
