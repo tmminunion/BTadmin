@@ -17,7 +17,7 @@ class NativeChatSimScreen extends StatefulWidget {
 }
 
 class _NativeChatSimScreenState extends State<NativeChatSimScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _api = BtAdminApi();
   late final TabController _tabCtrl = TabController(length: 2, vsync: this);
 
@@ -49,6 +49,7 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadState(initial: true);
     _pollTimer = Timer.periodic(
       const Duration(seconds: 3),
@@ -58,6 +59,7 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     _tabCtrl.dispose();
     _msgCtrl.dispose();
@@ -135,11 +137,23 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
     }
   }
 
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      if (_scrollCtrl.offset < 120) {
+        _scrollToBottom();
+      }
+    });
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
+          0.0,
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
         );
@@ -405,41 +419,51 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
                     style: TextStyle(color: AdminColors.muted),
                   ),
                 )
-              : ListView.builder(
-                  controller: _scrollCtrl,
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _messages.length + (_sending ? 1 : 0),
-                  itemBuilder: (_, idx) {
-                    if (_sending && idx == _messages.length) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AdminColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AdminColors.border),
+              : Align(
+                  alignment: Alignment.topCenter,
+                  child: ListView.builder(
+                    controller: _scrollCtrl,
+                    reverse: true,
+                    shrinkWrap: true,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _messages.length + (_sending ? 1 : 0),
+                    itemBuilder: (_, idx) {
+                      final typingOffset = _sending ? 1 : 0;
+                      if (typingOffset == 1 && idx == 0) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AdminColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AdminColors.border),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Copilot Studio sedang mengetik...',
+                                  style: TextStyle(fontSize: 13, color: AdminColors.muted),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'Copilot Studio sedang mengetik...',
-                                style: TextStyle(fontSize: 13, color: AdminColors.muted),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    final m = _messages[idx];
+                        );
+                      }
+                      final m = _messages[_messages.length - 1 - (idx - typingOffset)];
                     final role = '${m['sender_role'] ?? 'bot'}';
                     final isUser = role == 'user';
                     final isSys = role == 'system';
@@ -497,6 +521,7 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
                     );
                   },
                 ),
+              ),
         ),
         SafeArea(
           top: false,
