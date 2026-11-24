@@ -151,7 +151,25 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
     final text = (preset ?? _msgCtrl.text).trim();
     if (text.isEmpty || _sending) return;
     if (preset == null) _msgCtrl.clear();
-    setState(() => _sending = true);
+    final tempId = -DateTime.now().millisecondsSinceEpoch;
+    final senderName = _namaCtrl.text.trim().isEmpty ? 'Admin Simulasi' : _namaCtrl.text.trim();
+    setState(() {
+      _sending = true;
+      _messages.add({
+        'id': tempId,
+        'session_key': 'default',
+        'noreg': _noregCtrl.text.trim(),
+        'sender_role': 'user',
+        'sender_name': senderName,
+        'message': text,
+        'direction': 'outgoing',
+        'http_code': 0,
+        'latency_ms': 0,
+        'raw_payload': '',
+        'created_at': 'Mengirim...',
+      });
+    });
+    _scrollToBottom();
     try {
       await _api.postAction(
         widget.token,
@@ -164,8 +182,18 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
         },
         timeout: const Duration(seconds: 180),
       );
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == tempId);
+        });
+      }
       await _loadState(initial: false);
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == tempId);
+        });
+      }
       _snack(e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -380,8 +408,37 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
               : ListView.builder(
                   controller: _scrollCtrl,
                   padding: const EdgeInsets.all(12),
-                  itemCount: _messages.length,
+                  itemCount: _messages.length + (_sending ? 1 : 0),
                   itemBuilder: (_, idx) {
+                    if (_sending && idx == _messages.length) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AdminColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AdminColors.border),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Copilot Studio sedang mengetik...',
+                                style: TextStyle(fontSize: 13, color: AdminColors.muted),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
                     final m = _messages[idx];
                     final role = '${m['sender_role'] ?? 'bot'}';
                     final isUser = role == 'user';
