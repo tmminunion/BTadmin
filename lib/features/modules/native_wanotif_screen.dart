@@ -614,6 +614,11 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
             (b1 + b2 + lain);
     final etaSec = int.tryParse('${_baileyStats['eta_sec'] ?? 0}') ?? 0;
     final pauseAll = _baileyStats['pause_all'] == true;
+    final prefBot = (int.tryParse('${_baileyStats['preferred_bot'] ?? 1}') ?? 1) == 2 ? 2 : 1;
+    final actBot = (int.tryParse('${_baileyStats['active_bot'] ?? prefBot}') ?? prefBot) == 2 ? 2 : 1;
+    final failover = _baileyStats['failover'] == true;
+    final bot1On = _baileyStats['bot1_online'] != false;
+    final bot2On = _baileyStats['bot2_online'] != false;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -810,6 +815,85 @@ class _NativeWanotifScreenState extends State<NativeWanotifScreen>
                       ),
                     ),
                   ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 18),
+          Row(
+            children: [
+              const Icon(Icons.smart_toy_rounded, size: 16, color: AdminColors.emerald),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Bot Balasan (#idcard & OTP): Bot $actBot${failover ? " (Failover)" : ""} • B1:${bot1On ? "ON" : "OFF"} B2:${bot2On ? "ON" : "OFF"}',
+                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 34,
+                  child: prefBot == 1
+                      ? FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: AdminColors.sky),
+                          onPressed: null,
+                          icon: const Icon(Icons.check_circle_rounded, size: 15),
+                          label: const Text('Primary: Bot 1', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: _loading
+                              ? null
+                              : () async {
+                                  try {
+                                    final msg = await _api.postAction(widget.token, 'wanotif_action', {
+                                      'action': 'switch_bot',
+                                      'bot': 1,
+                                    });
+                                    _snack(msg);
+                                    await _load();
+                                  } catch (e) {
+                                    _snack('$e', isError: true);
+                                  }
+                                },
+                          icon: const Icon(Icons.looks_one_rounded, size: 15),
+                          label: const Text('Set Primary: Bot 1', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 34,
+                  child: prefBot == 2
+                      ? FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: AdminColors.emerald),
+                          onPressed: null,
+                          icon: const Icon(Icons.check_circle_rounded, size: 15),
+                          label: const Text('Primary: Bot 2', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: _loading
+                              ? null
+                              : () async {
+                                  try {
+                                    final msg = await _api.postAction(widget.token, 'wanotif_action', {
+                                      'action': 'switch_bot',
+                                      'bot': 2,
+                                    });
+                                    _snack(msg);
+                                    await _load();
+                                  } catch (e) {
+                                    _snack('$e', isError: true);
+                                  }
+                                },
+                          icon: const Icon(Icons.looks_two_rounded, size: 15),
+                          label: const Text('Set Primary: Bot 2', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        ),
                 ),
               ),
             ],

@@ -277,12 +277,16 @@ class BtAdminApi {
   Future<({bool pauseAll, bool pauseKta, String message})> toggleWanotif({
     required String token,
     required String field,
+    int? bot,
   }) async {
     final res = await http
         .post(
           Uri.parse('$baseUrl/btapi/AdminApp/toggle_wanotif'),
           headers: _authHeaders(token),
-          body: jsonEncode({'field': field}),
+          body: jsonEncode({
+            'field': field,
+            if (bot != null) 'bot': bot,
+          }),
         )
         .timeout(_timeout);
     final decoded = _decodeResponse(res, 'Gagal mengubah kontrol WA.');
@@ -292,6 +296,18 @@ class BtAdminApi {
       pauseKta: data['pause_kta'] == true,
       message: (decoded['message'] ?? 'Kontrol WA diperbarui.').toString(),
     );
+  }
+
+  Future<String> switchPrimaryWaBot({
+    required String token,
+    required int bot,
+  }) async {
+    final res = await toggleWanotif(
+      token: token,
+      field: 'active_bot',
+      bot: bot == 2 ? 2 : 1,
+    );
+    return res.message;
   }
 
   Future<String> updateAppMenu({

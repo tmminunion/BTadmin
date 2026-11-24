@@ -414,6 +414,11 @@ class AdminDashboardData {
     required this.waQueueTotal,
     required this.waQueueKta,
     required this.waQueueNonKta,
+    this.waPreferredBot = 1,
+    this.waActiveBot = 1,
+    this.waFailover = false,
+    this.waBot1Online = true,
+    this.waBot2Online = true,
     required this.latestLogins,
     required this.modules,
     required this.phpVersion,
@@ -436,6 +441,11 @@ class AdminDashboardData {
   final int waQueueTotal;
   final int waQueueKta;
   final int waQueueNonKta;
+  final int waPreferredBot;
+  final int waActiveBot;
+  final bool waFailover;
+  final bool waBot1Online;
+  final bool waBot2Online;
   final List<AdminLoginLogItem> latestLogins;
   final List<AdminModuleItem> modules;
   final String phpVersion;
@@ -481,6 +491,11 @@ class AdminDashboardData {
       waQueueTotal: int.tryParse((wa['queue_total'] ?? '0').toString()) ?? 0,
       waQueueKta: int.tryParse((wa['queue_kta'] ?? '0').toString()) ?? 0,
       waQueueNonKta: int.tryParse((wa['queue_non_kta'] ?? '0').toString()) ?? 0,
+      waPreferredBot: (int.tryParse((wa['preferred_bot'] ?? '1').toString()) ?? 1) == 2 ? 2 : 1,
+      waActiveBot: (int.tryParse((wa['active_bot'] ?? '1').toString()) ?? 1) == 2 ? 2 : 1,
+      waFailover: wa['failover'] == true,
+      waBot1Online: wa['bot1_online'] != false,
+      waBot2Online: wa['bot2_online'] != false,
       latestLogins: rawLogs
           .whereType<Map<String, dynamic>>()
           .map(AdminLoginLogItem.fromJson)

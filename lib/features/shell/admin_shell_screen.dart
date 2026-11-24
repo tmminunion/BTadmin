@@ -1314,6 +1314,83 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
         const SizedBox(height: 16),
         Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.smart_toy_rounded, color: AdminColors.emerald, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Bot Penjawab Utama (Webhook #idcard & OTP)',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (dash.waFailover ? AdminColors.gold : AdminColors.emerald).withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        dash.waFailover
+                            ? 'FAILOVER → BOT ${dash.waActiveBot}'
+                            : 'AKTIF: BOT ${dash.waActiveBot}',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          color: dash.waFailover ? AdminColors.gold : AdminColors.emerald,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Bot 1: ${dash.waBot1Online ? "ONLINE" : "OFFLINE"} • Bot 2: ${dash.waBot2Online ? "ONLINE" : "OFFLINE"} • Auto-failover jika bot utama mati',
+                  style: const TextStyle(fontSize: 11.5, color: AdminColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment<int>(
+                        value: 1,
+                        icon: Icon(Icons.looks_one_rounded, size: 17),
+                        label: Text('Primary: Bot 1'),
+                      ),
+                      ButtonSegment<int>(
+                        value: 2,
+                        icon: Icon(Icons.looks_two_rounded, size: 17),
+                        label: Text('Primary: Bot 2'),
+                      ),
+                    ],
+                    selected: {dash.waPreferredBot == 2 ? 2 : 1},
+                    onSelectionChanged: _busyAction
+                        ? null
+                        : (sel) {
+                            final nextBot = sel.first;
+                            if (nextBot != dash.waPreferredBot) {
+                              _runAction(
+                                () => _api.switchPrimaryWaBot(
+                                  token: widget.session.token,
+                                  bot: nextBot,
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
           child: Column(
             children: [
               SwitchListTile(
