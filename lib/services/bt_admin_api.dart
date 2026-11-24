@@ -178,13 +178,21 @@ class BtAdminApi {
         .toString();
   }
 
-  Future<AdminDashboardData> fetchHome(String token) async {
-    final res = await http
-        .get(
-          Uri.parse('$baseUrl/btapi/AdminApp/home'),
-          headers: _authHeaders(token),
-        )
+  Future<http.Response> _getWithRetry(String url, String token) async {
+    http.Response res = await http
+        .get(Uri.parse(url), headers: _authHeaders(token))
         .timeout(_timeout);
+    if (res.statusCode == 503) {
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      res = await http
+          .get(Uri.parse(url), headers: _authHeaders(token))
+          .timeout(_timeout);
+    }
+    return res;
+  }
+
+  Future<AdminDashboardData> fetchHome(String token) async {
+    final res = await _getWithRetry('$baseUrl/btapi/AdminApp/home', token);
     final decoded = _decodeResponse(res, 'Gagal memuat dashboard admin.');
     final data = (decoded['data'] as Map<String, dynamic>?) ?? const {};
     await AdminSessionStore().saveDashboardCache(jsonEncode(data));
@@ -362,12 +370,7 @@ class BtAdminApi {
   }
 
   Future<Map<String, dynamic>> getJson(String token, String endpoint) async {
-    final res = await http
-        .get(
-          Uri.parse('$baseUrl/btapi/AdminApp/$endpoint'),
-          headers: _authHeaders(token),
-        )
-        .timeout(_timeout);
+    final res = await _getWithRetry('$baseUrl/btapi/AdminApp/$endpoint', token);
     final decoded = _decodeResponse(res, 'Gagal memuat data.');
     final inner = decoded['data'];
     if (inner is Map<String, dynamic>) return inner;

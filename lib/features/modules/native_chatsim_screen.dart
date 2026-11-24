@@ -36,6 +36,7 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
   bool _forwardToFlutter = false;
 
   bool _loading = true;
+  bool _polling = false;
   bool _sending = false;
   bool _savingCfg = false;
   bool _testingIncoming = false;
@@ -70,6 +71,8 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
   }
 
   Future<void> _loadState({required bool initial}) async {
+    if (!initial && _polling) return;
+    _polling = true;
     if (initial) {
       setState(() {
         _loading = true;
@@ -127,6 +130,8 @@ class _NativeChatSimScreenState extends State<NativeChatSimScreen>
           _loading = false;
         });
       }
+    } finally {
+      _polling = false;
     }
   }
 
