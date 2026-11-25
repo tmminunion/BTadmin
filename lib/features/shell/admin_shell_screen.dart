@@ -49,6 +49,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
 
   int _tabIndex = 0;
   int _controlSubTab = 0;
+  String _modeFilter = 'all';
   AdminDashboardData? _dash;
   bool _loading = true;
   bool _busyAction = false;
@@ -1055,7 +1056,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           ],
           selected: {_controlSubTab},
           onSelectionChanged: (sel) {
-            setState(() => _controlSubTab = sel.first);
+            setState(() {
+              _controlSubTab = sel.first;
+              _modeFilter = 'all';
+            });
           },
         ),
         const SizedBox(height: 14),
@@ -1174,62 +1178,14 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           subtitle: 'Ubah status per modul layanan web',
         ),
         const SizedBox(height: 6),
-        ...dash.services.map(
-          (svc) => Card(
-            color: _modeCardColor(svc.mode),
-            shape: _modeCardShape(svc.mode),
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              leading: _ModeDot(mode: svc.mode),
-              title: Text(
-                svc.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              ),
-              subtitle: Text(
-                svc.group,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AdminColors.textSecondary,
-                ),
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: AdminColors.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _modeColor(svc.mode)),
-                ),
-                child: DropdownButton<String>(
-                  value: ['online', 'maintenance', 'shutdown'].contains(svc.mode)
-                      ? svc.mode
-                      : 'online',
-                  underline: const SizedBox.shrink(),
-                  dropdownColor: AdminColors.cardElevated,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: _modeColor(svc.mode),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'online', child: Text('ONLINE')),
-                    DropdownMenuItem(
-                        value: 'maintenance', child: Text('MAINT')),
-                    DropdownMenuItem(value: 'shutdown', child: Text('OFF')),
-                  ],
-                  onChanged: _busyAction
-                      ? null
-                      : (val) {
-                          if (val != null && val != svc.mode) {
-                            _changeServiceMode(svc, val);
-                          }
-                        },
-                ),
-              ),
-            ),
-          ),
+        ..._buildModeList(
+          items: dash.services,
+          name: (svc) => svc.name,
+          subtitle: (svc) => '',
+          group: (svc) => svc.group,
+          mode: (svc) => svc.mode,
+          offValue: 'shutdown',
+          onChange: (svc, val) => _changeServiceMode(svc, val),
         ),
         ] else ...[
           const _SectionHeader(
@@ -1237,66 +1193,103 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             subtitle: 'Kontrol ON / Maintenance / OFF menu aplikasi member',
           ),
           const SizedBox(height: 6),
-          ...dash.appMenus.map(
-            (m) => Card(
-              color: _modeCardColor(m.mode),
-              shape: _modeCardShape(m.mode),
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                leading: _ModeDot(mode: m.mode),
-                title: Text(
-                  m.label,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 14),
-                ),
-                subtitle: Text(
-                  '${m.route} • ${m.group}',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AdminColors.textSecondary,
-                  ),
-                ),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AdminColors.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _modeColor(m.mode)),
-                  ),
-                  child: DropdownButton<String>(
-                    value: ['online', 'maintenance', 'off'].contains(m.mode)
-                        ? m.mode
-                        : 'online',
-                    underline: const SizedBox.shrink(),
-                    dropdownColor: AdminColors.cardElevated,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: _modeColor(m.mode),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'online', child: Text('ONLINE')),
-                      DropdownMenuItem(
-                          value: 'maintenance', child: Text('MAINT')),
-                      DropdownMenuItem(value: 'off', child: Text('OFF')),
-                    ],
-                    onChanged: _busyAction
-                        ? null
-                        : (val) {
-                            if (val != null && val != m.mode) {
-                              _changeAppMenuMode(m, val);
-                            }
-                          },
-                  ),
-                ),
-              ),
-            ),
+          ..._buildModeList(
+            items: dash.appMenus,
+            name: (m) => m.label,
+            subtitle: (m) => m.route,
+            group: (m) => m.group,
+            mode: (m) => m.mode,
+            offValue: 'off',
+            onChange: (m, val) => _changeAppMenuMode(m, val),
           ),
         ],
       ],
     );
+  }
+
+  String _modeKey(String mode) {
+    final m = mode.toLowerCase();
+    if (m == 'online') return 'online';
+    if (m == 'maintenance') return 'maintenance';
+    return 'off';
+  }
+
+  /// Daftar layanan/menu: ringkasan + filter status, dikelompokkan per grup, satu kartu per item.
+  List<Widget> _buildModeList<T>({
+    required List<T> items,
+    required String Function(T) name,
+    required String Function(T) subtitle,
+    required String Function(T) group,
+    required String Function(T) mode,
+    required String offValue,
+    required void Function(T, String) onChange,
+  }) {
+    int count(String key) =>
+        items.where((i) => _modeKey(mode(i)) == key).length;
+    final filtered = items
+        .where((i) => _modeFilter == 'all' || _modeKey(mode(i)) == _modeFilter)
+        .toList();
+
+    final groups = <String, List<T>>{};
+    for (final i in filtered) {
+      final g = group(i).trim().isEmpty ? 'Lainnya' : group(i).trim();
+      groups.putIfAbsent(g, () => []).add(i);
+    }
+
+    Widget chip(String key, String label, Color color, int n) {
+      return _ModeFilterChip(
+        label: '$label $n',
+        color: color,
+        selected: _modeFilter == key,
+        onTap: () => setState(() => _modeFilter = key),
+      );
+    }
+
+    return [
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          chip('all', 'Semua', AdminColors.sky, items.length),
+          chip('online', 'ON', AdminColors.emerald, count('online')),
+          chip('maintenance', 'MAINT', AdminColors.gold, count('maintenance')),
+          chip('off', 'OFF', AdminColors.danger, count('off')),
+        ],
+      ),
+      const SizedBox(height: 6),
+      if (filtered.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 28),
+          child: Center(
+            child: Text(
+              'Tidak ada item dengan status ini.',
+              style: TextStyle(color: AdminColors.textSecondary, fontSize: 12.5),
+            ),
+          ),
+        ),
+      for (final entry in groups.entries) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+          child: Text(
+            '${entry.key}  (${entry.value.length})',
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AdminColors.textSecondary,
+            ),
+          ),
+        ),
+        for (final i in entry.value)
+          _ModeItemCard(
+            title: name(i),
+            subtitle: subtitle(i),
+            mode: mode(i),
+            offValue: offValue,
+            busy: _busyAction,
+            onChange: (val) => onChange(i, val),
+          ),
+      ],
+    ];
   }
 
   Widget _buildWaTab(AdminDashboardData? dash) {
@@ -1980,6 +1973,155 @@ class _ModeBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Chip filter status (Semua / ON / MAINT / OFF) dengan jumlah item.
+class _ModeFilterChip extends StatelessWidget {
+  const _ModeFilterChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color : AdminColors.border,
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: selected ? color : AdminColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu satu layanan/menu: judul di atas, tombol status ON / MAINT / OFF di bawah (sekali ketuk).
+class _ModeItemCard extends StatelessWidget {
+  const _ModeItemCard({
+    required this.title,
+    required this.subtitle,
+    required this.mode,
+    required this.offValue,
+    required this.busy,
+    required this.onChange,
+  });
+
+  final String title;
+  final String subtitle;
+  final String mode;
+  final String offValue;
+  final bool busy;
+  final ValueChanged<String> onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = mode.toLowerCase();
+    final isOff = current != 'online' && current != 'maintenance';
+    return Card(
+      color: _modeCardColor(mode),
+      shape: _modeCardShape(mode),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _ModeDot(mode: mode),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (subtitle.trim().isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AdminColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AdminColors.surface,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: AdminColors.border),
+              ),
+              child: Row(
+                children: [
+                  _GlobalSegmentBtn(
+                    label: 'ON',
+                    active: current == 'online',
+                    color: AdminColors.emerald,
+                    onTap: busy || current == 'online'
+                        ? null
+                        : () => onChange('online'),
+                  ),
+                  _GlobalSegmentBtn(
+                    label: 'MAINT',
+                    active: current == 'maintenance',
+                    color: AdminColors.gold,
+                    onTap: busy || current == 'maintenance'
+                        ? null
+                        : () => onChange('maintenance'),
+                  ),
+                  _GlobalSegmentBtn(
+                    label: 'OFF',
+                    active: isOff,
+                    color: AdminColors.danger,
+                    onTap: busy || isOff ? null : () => onChange(offValue),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
