@@ -13,12 +13,14 @@ class CdnCodeEditorScreen extends StatefulWidget {
     this.fileId = 0,
     this.initialFilename = '',
     this.initialMimeType = 'text/plain',
+    this.initialVisibility = 'public',
   });
 
   final String token;
   final int fileId;
   final String initialFilename;
   final String initialMimeType;
+  final String initialVisibility;
 
   @override
   State<CdnCodeEditorScreen> createState() => _CdnCodeEditorScreenState();
@@ -31,6 +33,9 @@ class _CdnCodeEditorScreenState extends State<CdnCodeEditorScreen> {
   late final TextEditingController _mimeCtrl =
       TextEditingController(text: widget.initialMimeType);
   final _fallbackCtrl = TextEditingController();
+  late String _visibility = widget.initialVisibility.toLowerCase() == 'private'
+      ? 'private'
+      : 'public';
 
   late final WebViewController _webCtrl;
   bool _editorReady = false;
@@ -129,6 +134,9 @@ class _CdnCodeEditorScreenState extends State<CdnCodeEditorScreen> {
       if (!mounted) return;
       _nameCtrl.text = '${item['filename'] ?? widget.initialFilename}';
       _mimeCtrl.text = '${item['mime_type'] ?? widget.initialMimeType}';
+      _visibility = '${item['visibility'] ?? widget.initialVisibility}'.toLowerCase() == 'private'
+          ? 'private'
+          : 'public';
       _currentContent = '${item['content'] ?? ''}';
       _fallbackCtrl.text = _currentContent;
       setState(() => _loading = false);
@@ -260,6 +268,7 @@ class _CdnCodeEditorScreenState extends State<CdnCodeEditorScreen> {
         'id': widget.fileId,
         'filename': fname,
         'mime_type': mime,
+        'visibility': _visibility,
         'content': content,
       });
       if (!mounted) return;
@@ -391,6 +400,50 @@ class _CdnCodeEditorScreenState extends State<CdnCodeEditorScreen> {
                       labelText: 'MIME',
                       isDense: true,
                       border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => setState(() {
+                    _visibility = _visibility == 'private' ? 'public' : 'private';
+                  }),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: _visibility == 'private'
+                          ? const Color(0xFF451A03)
+                          : const Color(0xFF052E16),
+                      border: Border.all(
+                        color: _visibility == 'private'
+                            ? Colors.amber.shade600
+                            : Colors.green.shade600,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _visibility == 'private' ? Icons.lock_rounded : Icons.public_rounded,
+                          size: 15,
+                          color: _visibility == 'private'
+                              ? Colors.amber.shade300
+                              : Colors.green.shade300,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _visibility == 'private' ? 'Private' : 'Public',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _visibility == 'private'
+                                ? Colors.amber.shade200
+                                : Colors.green.shade200,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
