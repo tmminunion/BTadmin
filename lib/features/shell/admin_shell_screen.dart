@@ -18,6 +18,7 @@ import '../modules/native_promo_screen.dart';
 import '../modules/native_users_screen.dart';
 import '../modules/native_extra_screens.dart';
 import '../modules/native_inbox_screen.dart';
+import '../modules/native_hallopuk_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../modules/native_webhook_screen.dart';
 import '../modules/native_chatsim_screen.dart';
@@ -247,6 +248,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         );
       case 'feedback':
         screen = NativeFeedbackScreen(token: widget.session.token);
+      case 'hallopuk':
+        screen = NativeHallopukScreen(token: widget.session.token);
       case 'menus':
         screen = NativeMenusScreen(token: widget.session.token);
       case 'analytics':
@@ -446,6 +449,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
       );
     }
+    if (!modules.any((m) => m.key == 'hallopuk')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'hallopuk',
+          category: 'Komunikasi & Saran',
+          title: 'Hallo PUK (Aspirasi)',
+          desc: 'Laporan, usulan & pertanyaan anggota ke PUK',
+          path: '/adminpanel/hallopuk',
+          iconName: 'bullhorn',
+        ),
+      );
+    }
     if (!modules.any((m) => m.key == 'wanotif_fcm')) {
       modules.add(
         const AdminModuleItem(
@@ -526,6 +541,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           return Icons.smart_toy_rounded;
         case 'feedback':
           return Icons.rate_review_rounded;
+        case 'hallopuk':
+          return Icons.campaign_rounded;
         case 'email':
           return Icons.email_rounded;
         case 'users':
