@@ -94,7 +94,7 @@ class _NativeHallopukScreenState extends State<NativeHallopukScreen> {
               Text(
                 'Tindak Lanjut ${item['ticket_code'] ?? '#$id'}',
                 style: const TextStyle(
-                  color: AdminColors.ink,
+                  color: AdminColors.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
                 ),
@@ -119,7 +119,7 @@ class _NativeHallopukScreenState extends State<NativeHallopukScreen> {
               TextField(
                 controller: noteCtrl,
                 maxLines: 3,
-                style: const TextStyle(color: AdminColors.ink, fontSize: 13),
+                style: const TextStyle(color: AdminColors.textPrimary, fontSize: 13),
                 decoration: InputDecoration(
                   labelText: 'Tanggapan / Catatan PUK',
                   labelStyle: const TextStyle(color: AdminColors.muted),
@@ -160,9 +160,9 @@ class _NativeHallopukScreenState extends State<NativeHallopukScreen> {
       case 'selesai':
         return AdminColors.emerald;
       case 'diproses':
-        return AdminColors.cyan;
+        return AdminColors.sky;
       default:
-        return AdminColors.amber;
+        return AdminColors.gold;
     }
   }
 
@@ -240,7 +240,7 @@ class _NativeHallopukScreenState extends State<NativeHallopukScreen> {
                                         child: Text(
                                           '${it['ticket_code'] ?? '#$id'} · ${it['kategori_label'] ?? it['kategori'] ?? 'Lapor'}',
                                           style: const TextStyle(
-                                            color: AdminColors.cyan,
+                                            color: AdminColors.sky,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 12,
                                           ),
@@ -270,7 +270,7 @@ class _NativeHallopukScreenState extends State<NativeHallopukScreen> {
                                   Text(
                                     '${it['judul'] ?? '-'}',
                                     style: const TextStyle(
-                                      color: AdminColors.ink,
+                                      color: AdminColors.textPrimary,
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14.5,
                                     ),
