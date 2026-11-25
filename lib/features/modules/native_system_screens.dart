@@ -21,6 +21,7 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _items = const [];
   String _query = '';
+  String _visFilter = 'all'; // all, public, private
 
   @override
   void initState() {
@@ -66,11 +67,26 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
           fileId: int.tryParse('${item?['id'] ?? 0}') ?? 0,
           initialFilename: (item?['filename'] ?? '').toString(),
           initialMimeType: (item?['mime_type'] ?? 'text/plain').toString(),
+          initialVisibility: (item?['visibility'] ?? 'public').toString(),
         ),
       ),
     );
     if (saved == true) {
       _load();
+    }
+  }
+
+  Future<void> _toggleVisibility(int id, String fname, String currentVis) async {
+    final nextVis = currentVis == 'private' ? 'public' : 'private';
+    try {
+      final msg = await _api.postAction(widget.token, 'cdn_toggle_visibility', {
+        'id': id,
+        'visibility': nextVis,
+      });
+      _snack(msg);
+      _load();
+    } catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''), isError: true);
     }
   }
 
@@ -103,6 +119,8 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _items.where((it) {
+      final vis = (it['visibility'] ?? 'public').toString().toLowerCase();
+      if (_visFilter != 'all' && vis != _visFilter) return false;
       if (_query.isEmpty) return true;
       return (it['filename'] ?? '').toString().toLowerCase().contains(_query.toLowerCase());
     }).toList();
@@ -124,7 +142,7 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: TextField(
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search, size: 18),
@@ -133,6 +151,26 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
                 border: OutlineInputBorder(),
               ),
               onChanged: (v) => setState(() => _query = v.trim()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 2, 12, 4),
+            child: Row(
+              children: [
+                for (final opt in const [
+                  ('all', 'Semua'),
+                  ('public', 'Public'),
+                  ('private', 'Private'),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(opt.$2, style: const TextStyle(fontSize: 12)),
+                      selected: _visFilter == opt.$1,
+                      onSelected: (_) => setState(() => _visFilter = opt.$1),
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -150,6 +188,10 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
                             final it = filtered[i];
                             final id = int.tryParse('${it['id'] ?? 0}') ?? 0;
                             final fname = (it['filename'] ?? '-').toString();
+                            final vis = (it['visibility'] ?? 'public').toString().toLowerCase() == 'private'
+                                ? 'private'
+                                : 'public';
+                            final isPrivate = vis == 'private';
                             final url = (it['url'] ?? '').toString();
                             final sizeKb = ((int.tryParse('${it['size'] ?? 0}') ?? 0) / 1024).toStringAsFixed(1);
                             return Card(
@@ -157,9 +199,41 @@ class _NativeCdnScreenState extends State<NativeCdnScreen> {
                               child: ListTile(
                                 dense: true,
                                 onTap: () => _openCodeEditor(it),
-                                leading: const Icon(Icons.code_rounded, color: AdminColors.primary),
+                                leading: Icon(
+                                  isPrivate ? Icons.lock_rounded : Icons.public_rounded,
+                                  color: isPrivate ? Colors.amber.shade800 : AdminColors.success,
+                                ),
                                 title: Text(fname, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                subtitle: Text('${it['mime_type'] ?? '-'} • $sizeKb KB'),
+                                subtitle: Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () => _toggleVisibility(id, fname, vis),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isPrivate ? Colors.amber.shade100 : Colors.green.shade100,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          isPrivate ? 'PRIVATE' : 'PUBLIC',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: isPrivate ? Colors.amber.shade900 : Colors.green.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '${it['mime_type'] ?? '-'} • $sizeKb KB',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -318,6 +392,7 @@ class _NativeSettingsScreenState extends State<NativeSettingsScreen> {
   final _api = BtAdminApi();
   bool _loading = true;
   Map<String, dynamic> _data = const {};
+  Map<String, dynamic>? _secKey;
   String _err = '';
 
   @override
@@ -333,9 +408,14 @@ class _NativeSettingsScreenState extends State<NativeSettingsScreen> {
     });
     try {
       final res = await _api.getJson(widget.token, 'settings_get');
+      Map<String, dynamic>? sec;
+      try {
+        sec = await _api.getJson(widget.token, 'security_key');
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _data = res;
+        _secKey = sec;
         _loading = false;
       });
     } catch (e) {
@@ -344,6 +424,54 @@ class _NativeSettingsScreenState extends State<NativeSettingsScreen> {
         _err = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _rotateSecurityKey() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rotate Key Enkripsi?'),
+        content: const Text(
+          'Key QR & enc_noreg akan diganti ke versi baru. User aktif otomatis menarik versi baru tanpa login ulang.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Rotate Key'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final msg = await _api.postAction(widget.token, 'security_key_rotate', {});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AdminColors.emerald),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AdminColors.danger),
+      );
+    }
+  }
+
+  Future<void> _toggleLegacyFallback(bool enabled) async {
+    try {
+      final msg = await _api.postAction(widget.token, 'security_key_legacy', {'enabled': enabled});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AdminColors.danger),
+      );
     }
   }
 
@@ -402,6 +530,53 @@ class _NativeSettingsScreenState extends State<NativeSettingsScreen> {
                           onChanged: (_) => _toggleSso(),
                         ),
                       ),
+                      if (_secKey != null) ...[
+                        const SizedBox(height: 10),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.vpn_key_rounded, color: AdminColors.danger),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                        'Dynamic Encryption Key (QR & enc_noreg)',
+                                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                      ),
+                                    ),
+                                    Chip(label: Text('v${_secKey!['version'] ?? 1}')),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Diperbarui oleh: ${_secKey!['rotated_by'] ?? '-'} (${_secKey!['created_at'] ?? '-'})',
+                                  style: const TextStyle(fontSize: 11.5, color: AdminColors.muted),
+                                ),
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Legacy Fallback (APK Lama)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                                  subtitle: Text(_secKey!['legacy_fallback'] == true ? 'Aktif (APK lama tetap bisa scan)' : 'Mati (Strict key terbaru)'),
+                                  value: _secKey!['legacy_fallback'] == true,
+                                  onChanged: _toggleLegacyFallback,
+                                ),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(backgroundColor: AdminColors.danger, foregroundColor: Colors.white),
+                                    onPressed: _rotateSecurityKey,
+                                    icon: const Icon(Icons.sync_rounded),
+                                    label: const Text('Rotate / Ganti Key Enkripsi'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
