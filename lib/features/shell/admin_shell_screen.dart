@@ -21,6 +21,7 @@ import '../modules/native_inbox_screen.dart';
 import '../modules/native_wanotif_screen.dart';
 import '../modules/native_webhook_screen.dart';
 import '../modules/native_chatsim_screen.dart';
+import '../modules/native_btchat_screen.dart';
 import '../modules/native_system_screens.dart';
 import '../modules/native_apitester_screen.dart';
 import '../webview/admin_webview_screen.dart';
@@ -69,6 +70,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     'wanotif_antrean',
     'webhook',
     'chatsim',
+    'btchat',
     'email',
     'survey',
   };
@@ -258,6 +260,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         break;
       case 'chatsim':
         screen = NativeChatSimScreen(token: widget.session.token);
+        break;
+      case 'btchat':
+        screen = NativeBtChatScreen(token: widget.session.token);
         break;
       case 'inbox':
         screen = NativeInboxScreen(
@@ -476,6 +481,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         ),
       );
     }
+    if (!modules.any((m) => m.key == 'btchat')) {
+      modules.add(
+        const AdminModuleItem(
+          key: 'btchat',
+          category: 'Development & Testing',
+          title: 'BTchat (Copilot AI)',
+          desc: 'Chat UI langsung dengan Assist Pintar Bungtemin via Copilot API',
+          path: '/adminpanel/btchat',
+          iconName: 'robot',
+        ),
+      );
+    }
 
     final grouped = <String, List<AdminModuleItem>>{};
     for (final m in modules) {
@@ -504,6 +521,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         case 'webhook':
           return Icons.hub_rounded;
         case 'chatsim':
+        case 'btchat':
           return Icons.smart_toy_rounded;
         case 'feedback':
           return Icons.rate_review_rounded;
@@ -1158,6 +1176,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         const SizedBox(height: 6),
         ...dash.services.map(
           (svc) => Card(
+            color: _modeCardColor(svc.mode),
+            shape: _modeCardShape(svc.mode),
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               contentPadding:
@@ -1180,7 +1200,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                 decoration: BoxDecoration(
                   color: AdminColors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AdminColors.border),
+                  border: Border.all(color: _modeColor(svc.mode)),
                 ),
                 child: DropdownButton<String>(
                   value: ['online', 'maintenance', 'shutdown'].contains(svc.mode)
@@ -1188,10 +1208,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                       : 'online',
                   underline: const SizedBox.shrink(),
                   dropdownColor: AdminColors.cardElevated,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: AdminColors.textPrimary,
+                    color: _modeColor(svc.mode),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'online', child: Text('ONLINE')),
@@ -1219,6 +1239,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           const SizedBox(height: 6),
           ...dash.appMenus.map(
             (m) => Card(
+              color: _modeCardColor(m.mode),
+              shape: _modeCardShape(m.mode),
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 contentPadding:
@@ -1241,7 +1263,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                   decoration: BoxDecoration(
                     color: AdminColors.surface,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AdminColors.border),
+                    border: Border.all(color: _modeColor(m.mode)),
                   ),
                   child: DropdownButton<String>(
                     value: ['online', 'maintenance', 'off'].contains(m.mode)
@@ -1249,10 +1271,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                         : 'online',
                     underline: const SizedBox.shrink(),
                     dropdownColor: AdminColors.cardElevated,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: AdminColors.textPrimary,
+                      color: _modeColor(m.mode),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'online', child: Text('ONLINE')),
@@ -1879,16 +1901,30 @@ class _GlobalSegmentBtn extends StatelessWidget {
 
 }
 
+/// Warna status layanan/menu: ON = hijau, Maintenance = kuning/amber, OFF = merah.
+Color _modeColor(String mode) {
+  final m = mode.toLowerCase();
+  if (m == 'online') return AdminColors.emerald;
+  if (m == 'maintenance') return AdminColors.gold;
+  return AdminColors.danger;
+}
+
+/// Kartu menu/layanan yang berwarna sesuai status supaya mudah dibedakan sekilas.
+Color _modeCardColor(String mode) =>
+    Color.alphaBlend(_modeColor(mode).withValues(alpha: 0.10), AdminColors.card);
+
+ShapeBorder _modeCardShape(String mode) => RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: _modeColor(mode).withValues(alpha: 0.6), width: 1.3),
+    );
+
 class _ModeDot extends StatelessWidget {
   const _ModeDot({required this.mode});
   final String mode;
 
   @override
   Widget build(BuildContext context) {
-    final m = mode.toLowerCase();
-    final Color c = m == 'online'
-        ? AdminColors.emerald
-        : (m == 'maintenance' ? AdminColors.gold : AdminColors.danger);
+    final Color c = _modeColor(mode);
     return Container(
       width: 10,
       height: 10,
