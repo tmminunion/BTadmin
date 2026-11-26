@@ -46,12 +46,13 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
     }
   }
 
-  Future<void> _action(int id, String act, {String? status}) async {
+  Future<void> _action(int id, String act, {String? status, String? adminNote}) async {
     try {
       final msg = await _api.postAction(widget.token, 'feedback_action', {
         'id': id,
         'action': act,
         if (status != null) 'status': status,
+        if (adminNote != null) 'admin_note': adminNote,
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,6 +64,80 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$e'), backgroundColor: AdminColors.danger),
       );
+    }
+  }
+
+  Future<void> _openReplyDialog(Map<String, dynamic> item) async {
+    final id = int.tryParse('${item['id']}') ?? 0;
+    if (id <= 0) return;
+    final noteCtrl = TextEditingController(text: '${item['admin_note'] ?? ''}');
+    String selStatus = '${item['status'] ?? 'diproses'}';
+    if (!['baru', 'diproses', 'selesai'].contains(selStatus)) {
+      selStatus = 'diproses';
+    }
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setD) => AlertDialog(
+            title: Text('Balas Saran #$id'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${item['nama'] ?? 'Guest'}: ${item['message'] ?? ''}',
+                    style: const TextStyle(fontSize: 12.5, color: AdminColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'baru', child: Text('Baru')),
+                      DropdownMenuItem(value: 'diproses', child: Text('Diproses')),
+                      DropdownMenuItem(value: 'selesai', child: Text('Selesai')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setD(() => selStatus = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Balasan / Feedback untuk User',
+                      hintText: 'Tulis tanggapan admin...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Batal'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Kirim Balasan'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (ok == true && mounted) {
+        await _action(id, 'update', status: selStatus, adminNote: noteCtrl.text.trim());
+      }
+    } finally {
+      noteCtrl.dispose();
     }
   }
 
@@ -172,6 +247,24 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
                                       '${item['message'] ?? ''}',
                                       style: const TextStyle(fontSize: 13),
                                     ),
+                                    if ('${item['admin_note'] ?? ''}'.trim().isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AdminColors.primary.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: AdminColors.primary.withValues(alpha: 0.25),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Balasan${'${item['replied_by'] ?? ''}'.trim().isNotEmpty ? ' (${item['replied_by']})' : ''}: ${item['admin_note']}',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 8),
                                     Row(
                                       mainAxisAlignment:
@@ -186,6 +279,15 @@ class _NativeFeedbackScreenState extends State<NativeFeedbackScreen> {
                                         ),
                                         Row(
                                           children: [
+                                            IconButton(
+                                              tooltip: 'Balas & Ubah Status',
+                                              icon: const Icon(
+                                                Icons.reply_rounded,
+                                                size: 20,
+                                                color: AdminColors.primary,
+                                              ),
+                                              onPressed: () => _openReplyDialog(item),
+                                            ),
                                             PopupMenuButton<String>(
                                               icon: const Icon(
                                                 Icons.edit_note_rounded,
