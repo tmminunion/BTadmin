@@ -565,7 +565,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
         for (int i = 0; i < _fields.length; i++) _buildFieldEditor(i),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Kirim Push Notifikasi FCM (target Semua)', style: TextStyle(fontSize: 13)),
+          title: const Text('Kirim Push Notifikasi FCM sesuai Target', style: TextStyle(fontSize: 13)),
           value: _sendFcm,
           onChanged: (v) => setState(() => _sendFcm = v),
         ),
