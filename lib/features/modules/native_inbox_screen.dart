@@ -38,6 +38,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
   String _category = 'pengumuman';
   String _targetGroup = 'all';
   bool _sendFcm = false;
+  bool _preventScreenshot = false;
   final List<_FormFieldDraft> _fields = [];
 
   @override
@@ -123,6 +124,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
     setState(() {
       _category = '${item['category'] ?? 'pengumuman'}';
       _targetGroup = '${item['target_group'] ?? 'all'}';
+      _preventScreenshot = item['prevent_screenshot'] == true;
     });
     _tab.animateTo(1);
     _snack('Template/broadcast dimuat ke editor.');
@@ -154,6 +156,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
         'webhook_url': _webhookCtrl.text.trim(),
         'is_template': isTemplate,
         'send_fcm': isTemplate ? false : _sendFcm,
+        'prevent_screenshot': _preventScreenshot,
       });
       _snack(msg);
       _titleCtrl.clear();
@@ -562,6 +565,12 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
           title: const Text('Kirim Push Notifikasi FCM (target Semua)', style: TextStyle(fontSize: 13)),
           value: _sendFcm,
           onChanged: (v) => setState(() => _sendFcm = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Blokir Screenshot & Screen Record (Anti-SS)', style: TextStyle(fontSize: 13)),
+          value: _preventScreenshot,
+          onChanged: (v) => setState(() => _preventScreenshot = v),
         ),
         const SizedBox(height: 12),
         TextField(
