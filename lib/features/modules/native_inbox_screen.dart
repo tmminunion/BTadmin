@@ -39,6 +39,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
   String _targetGroup = 'all';
   bool _sendFcm = false;
   bool _preventScreenshot = false;
+  bool _allowDelete = true;
   final List<_FormFieldDraft> _fields = [];
 
   @override
@@ -125,6 +126,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
       _category = '${item['category'] ?? 'pengumuman'}';
       _targetGroup = '${item['target_group'] ?? 'all'}';
       _preventScreenshot = item['prevent_screenshot'] == true;
+      _allowDelete = item['allow_delete'] != false;
     });
     _tab.animateTo(1);
     _snack('Template/broadcast dimuat ke editor.');
@@ -157,6 +159,7 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
         'is_template': isTemplate,
         'send_fcm': isTemplate ? false : _sendFcm,
         'prevent_screenshot': _preventScreenshot,
+        'allow_delete': _allowDelete,
       });
       _snack(msg);
       _titleCtrl.clear();
@@ -571,6 +574,12 @@ class _NativeInboxScreenState extends State<NativeInboxScreen>
           title: const Text('Blokir Screenshot & Screen Record (Anti-SS)', style: TextStyle(fontSize: 13)),
           value: _preventScreenshot,
           onChanged: (v) => setState(() => _preventScreenshot = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Izinkan Anggota Hapus Pesan Ini', style: TextStyle(fontSize: 13)),
+          value: _allowDelete,
+          onChanged: (v) => setState(() => _allowDelete = v),
         ),
         const SizedBox(height: 12),
         TextField(
